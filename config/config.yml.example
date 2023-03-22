@@ -1,13 +1,19 @@
-# max_gpt4_bot
 telegram_token: ""
-
-# maidaritsydenov@gmail.com
 openai_api_key: ""
 
+# config
 use_chatgpt_api: true
 allowed_telegram_usernames: []  # if empty, the bot is available to anyone. pass a username string to allow it and/or user ids as integers
 new_dialog_timeout: 600  # new dialog starts after timeout (in seconds)
 enable_message_streaming: true  # if set, messages will be shown to user word-by-word
+
+
+# SaluteSpeech config (https://developers.sber.ru/studio/workspaces/)
+SBER_SALUTE_TOKEN: "Y2EwODVlMjQtYWY5Mi00MDIxLWE4YTctYjQwMTNlOGU4NTJlOjc1MmFhNDEzLTk5ZTYtNDU3NS1hNWVmLTA1N2U5YzMyMDUwNA=="
+SBER_SALUTE_SCOPE: "SALUTE_SPEECH_PERS"
+PATH_TO_SERT_LINUX: "/code/config/russiantrustedca.pem"
+PATH_TO_SERT_WINDOWS: "C:/Users/user/Downloads/russian_trusted_root_ca.cer"
+
 
 # prices
 chatgpt_price_per_1000_tokens: 0.002
@@ -18,7 +24,11 @@ whisper_price_per_1_min: 0.006
 # Кодовые фразы для групп
 CHATGPT_GROUP: "Макс, "
 DALLE_GROUP: "Макс, нарисуй"
+SALUTESPEECH_GROUP: "Макс, расскажи"
 
 
 # Кодовые фразы для приватных чатов
 DALLE_PRIVATE: "Нарисуй"
+SALUTESPEECH_PRIVATE: "Расскажи"
+
+

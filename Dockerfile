@@ -15,6 +15,8 @@ RUN apt-get install -y python3 python3-pip python-dev build-essential python3-ve
 RUN mkdir -p /code
 ADD . /code
 WORKDIR /code
+RUN mkdir -p /code/text_messages
+RUN mkdir -p /code/voice_messages
 
 RUN pip3 install -r requirements.txt
 

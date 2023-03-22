@@ -14,6 +14,12 @@ config_env = dotenv.dotenv_values(config_dir / "config.env")
 # config parameters
 telegram_token = config_yaml["telegram_token"]
 openai_api_key = config_yaml["openai_api_key"]
+
+SBER_SALUTE_TOKEN = config_yaml['SBER_SALUTE_TOKEN']
+SBER_SALUTE_SCOPE = config_yaml['SBER_SALUTE_SCOPE']
+PATH_TO_SERT_LINUX = config_yaml['PATH_TO_SERT_LINUX']
+PATH_TO_SERT_WINDOWS = config_yaml['PATH_TO_SERT_WINDOWS']
+
 use_chatgpt_api = config_yaml.get("use_chatgpt_api", True)
 allowed_telegram_usernames = config_yaml["allowed_telegram_usernames"]
 new_dialog_timeout = config_yaml["new_dialog_timeout"]
@@ -33,3 +39,5 @@ whisper_price_per_1_min = config_yaml.get("whisper_price_per_1_min", 0.006)
 CHATGPT_GROUP = config_yaml.get("CHATGPT_GROUP")
 DALLE_GROUP = config_yaml.get("DALLE_GROUP")
 DALLE_PRIVATE = config_yaml.get("DALLE_PRIVATE")
+SALUTESPEECH_GROUP = config_yaml.get("SALUTESPEECH_GROUP")
+SALUTESPEECH_PRIVATE = config_yaml.get("SALUTESPEECH_PRIVATE")

@@ -48,7 +48,7 @@ class Database:
 
             "n_used_tokens": 0,
 
-            "s_date": int(str(datetime.now())[8:10:]) - 1,
+            "s_date": int(str(datetime.now())[8:10:]) + 1,
             "usd_rate": 75.0
         }
 

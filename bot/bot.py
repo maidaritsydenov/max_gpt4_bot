@@ -35,6 +35,7 @@ import config
 import database
 import openai_utils
 from get_current_usd import usd_rate_check
+from synthesis import main
 
 
 # setup
@@ -87,10 +88,10 @@ async def start_handle(update: Update, context: CallbackContext):
     chat_id = str(update.effective_chat.id)
     ch = '-'
     if ch in chat_id:
-        reply_text += "✴️ Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением, используя слово <code>Макс, '''ВАШ ЗАПРОС'''</code> \n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение\n<code>Макс, нарисуй '''ВАШ ЗАПРОС'''</code>\n*Используй английский язык для повышения качества ответа*\n"
+        reply_text += "✴️ Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением, используя слово <code>Макс, '''ВАШ ЗАПРОС'''</code> \n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение\n<code>Макс, нарисуй '''ВАШ ЗАПРОС'''</code>\n\n✴️ Я могу отправить тебе <b>голосовое</b>. Для этого используй конструкцию <code>Расскажи '''ВАШ ЗАПРОС'''</code>\n<i>*Используй английский язык для повышения качества ответа*</i>\n"
     
     elif ch not in chat_id:
-        reply_text += "✴️ Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением\n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение\n<code>Нарисуй '''ВАШ ЗАПРОС'''</code>\n*Используй английский язык для повышения качества ответа*\n"
+        reply_text += "✴️ Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением\n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение\n<code>Нарисуй '''ВАШ ЗАПРОС'''</code>\n\n✴️ Я могу отправить тебе <b>голосовое</b>. Для этого используй конструкцию <code>Расскажи '''ВАШ ЗАПРОС'''</code>\n<i>*Используй английский язык для повышения качества ответа*</i>\n"
     
     else:
         reply_text = 'В <b>приватных чатах</b> используй конструкцию <code>Нарисуй</code> для генерации изображения или любое текстовое или голосовое сообщение\n\nВ <b>группах</b> используй конструкцию <code>Макс, </code> или <code>Макс, нарисуй</code> для генерации изображения'
@@ -149,7 +150,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         await update.message.chat.send_action(action="typing")
 
         try:
-            message = message or update.message.text or update.text
+            message = message or update.message.text
             
             chat_id = str(update.effective_chat.id)
             ch = '-'
@@ -158,7 +159,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                 message = message[6::]
             else:
                 message = message or update.message.text
-
+            
 
             dialog_messages = db.get_dialog_messages(user_id, dialog_id=None)
             parse_mode = {
@@ -167,103 +168,178 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
             }[openai_utils.CHAT_MODES[chat_mode]["parse_mode"]]
 
             chatgpt_instance = openai_utils.ChatGPT(use_chatgpt_api=config.use_chatgpt_api)
-            if config.enable_message_streaming:
-                gen = chatgpt_instance.send_message_stream(message, dialog_messages=dialog_messages, chat_mode=chat_mode)
-            else:
+
+
+            if message.startswith(config.SALUTESPEECH_PRIVATE):
+                await update.message.chat.send_action(action="typing")
+
+                chat_id = update.effective_chat.id
+                username = update.message.chat.username
+                unique_id = update.update_id
+                
                 answer, n_used_tokens, n_first_dialog_messages_removed = await chatgpt_instance.send_message(
-                    message,
-                    dialog_messages=dialog_messages,
-                    chat_mode=chat_mode
-                )
-                async def fake_gen():
-                    yield "finished", answer, n_used_tokens, n_first_dialog_messages_removed
-
-                gen = fake_gen()
-
-            # send message to user
-            prev_answer = ""
-            i = -1
-            async for gen_item in gen:
-                i += 1
-
-                status = gen_item[0]
-                if status == "not_finished":
-                    status, answer = gen_item
-                elif status == "finished":
-                    status, answer, n_used_tokens, n_first_dialog_messages_removed = gen_item
+                        message,
+                        dialog_messages=dialog_messages,
+                        chat_mode=chat_mode
+                    )
+                if "<" in answer or '>' in answer:
+                    await update.message.chat.send_action(action="typing")
+                    text = 'Невозможно озвучить код. Пожалуйста, измените режим.'
+                    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
                 else:
-                    raise ValueError(f"Streaming status {status} is unknown")
-
-                answer = answer[:4096]  # telegram message limit
-                if i == 0:  # send first message (then it'll be edited if message streaming is enabled)
-                    try:                    
-                        sent_message = await update.message.reply_text(answer, parse_mode=parse_mode)
-                    except telegram.error.BadRequest as e:
-                        if str(e).startswith("Message must be non-empty"):  # first answer chunk from openai was empty
-                            i = -1  # try again to send first message
-                            continue
-                        else:
-                            sent_message = await update.message.reply_text(answer)
-                else:  # edit sent message
-                    # update only when 100 new symbols are ready
-                    if abs(len(answer) - len(prev_answer)) < 100 and status != "finished":
-                        continue
-
-                    try:                    
-                        await context.bot.edit_message_text(answer, chat_id=sent_message.chat_id, message_id=sent_message.message_id, parse_mode=parse_mode)
-                    except telegram.error.BadRequest as e:
-                        if str(e).startswith("Message is not modified"):
-                            continue
-                        else:
-                            await context.bot.edit_message_text(answer, chat_id=sent_message.chat_id, message_id=sent_message.message_id)
-
-                    await asyncio.sleep(0.01)  # wait a bit to avoid flooding
+                    await update.message.chat.send_action(action="record_voice")
+                    audio_file_path = await main(answer, unique_id)
                     
-                prev_answer = answer
+                    file = open(f'{audio_file_path}', 'rb')
+                    try:
+                        # await update.message.reply_text(answer, parse_mode=ParseMode.HTML)
+                        await update.message.reply_voice(voice=file, caption=f'@{username}')
+                        file.close()
+                    except telegram.error.TelegramError as e:
+                            print(f"Error sending voice message: {e}")
+                            
+                            
+                # update user data
+                new_dialog_message = {"user": message, "bot": answer, "date": datetime.now()}
+                db.set_dialog_messages(
+                    user_id,
+                    db.get_dialog_messages(user_id, dialog_id=None) + [new_dialog_message],
+                    dialog_id=None
+                )
+                
+                n_used_tokens_last_message = n_used_tokens
+                
+                db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+                
+                price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
+                # Получить текущий курс usd to rub
+                old_answer = []
+                # old_answer = ["Число месяца: str", Курс usd: float]
 
-            # update user data
-            new_dialog_message = {"user": message, "bot": answer, "date": datetime.now()}
-            db.set_dialog_messages(
-                user_id,
-                db.get_dialog_messages(user_id, dialog_id=None) + [new_dialog_message],
-                dialog_id=None
-            )
-            
-            n_used_tokens_last_message = n_used_tokens
-            
-            db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
-            
-            price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
-            # Получить текущий курс usd to rub
-            old_answer = []
-            # old_answer = ["Число месяца: str", Курс usd: float]
+                n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+                
+                s_date = db.get_user_attribute(user_id, 's_date')
+                usd_rate = db.get_user_attribute(user_id, 'usd_rate')
 
-            n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-            
-            s_date = db.get_user_attribute(user_id, 's_date')
-            usd_rate = db.get_user_attribute(user_id, 'usd_rate')
+                old_answer.append(s_date)
+                old_answer.append(usd_rate)
 
-            old_answer.append(s_date)
-            old_answer.append(usd_rate)
+                new_answer = usd_rate_check(old_answer)
 
-            new_answer = usd_rate_check(old_answer)
+                s_date = new_answer[0]
+                usd_rate = new_answer[1]
+                
+                db.set_user_attribute(user_id, 's_date', s_date)
+                db.set_user_attribute(user_id, 'usd_rate', usd_rate)
+                
+                rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
+                n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
+                
+                text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate}руб.</b>\n\n'
+                text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f}руб.</b>\n"
+                text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
+                text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
+            
+                # await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
-            s_date = new_answer[0]
-            usd_rate = new_answer[1]
-            
-            db.set_user_attribute(user_id, 's_date', s_date)
-            db.set_user_attribute(user_id, 'usd_rate', usd_rate)
-            
-            rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
-            n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
-            
-            text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate}руб.</b>\n\n'
-            text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f}руб.</b>\n"
-            text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
-            text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
-        
-            await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+            else:
+                if config.enable_message_streaming:
+                    gen = chatgpt_instance.send_message_stream(message, dialog_messages=dialog_messages, chat_mode=chat_mode)
+                else:
+                    answer, n_used_tokens, n_first_dialog_messages_removed = await chatgpt_instance.send_message(
+                        message,
+                        dialog_messages=dialog_messages,
+                        chat_mode=chat_mode
+                    )
+                    async def fake_gen():
+                        yield "finished", answer, n_used_tokens, n_first_dialog_messages_removed
 
+                    gen = fake_gen()
+
+                # send message to user
+                prev_answer = ""
+                i = -1
+                async for gen_item in gen:
+                    i += 1
+
+                    status = gen_item[0]
+                    if status == "not_finished":
+                        status, answer = gen_item
+                    elif status == "finished":
+                        status, answer, n_used_tokens, n_first_dialog_messages_removed = gen_item
+                    else:
+                        raise ValueError(f"Streaming status {status} is unknown")
+
+                    answer = answer[:4096]  # telegram message limit
+                    if i == 0:  # send first message (then it'll be edited if message streaming is enabled)
+                        try:                    
+                            sent_message = await update.message.reply_text(answer, parse_mode=parse_mode)
+                        except telegram.error.BadRequest as e:
+                            if str(e).startswith("Message must be non-empty"):  # first answer chunk from openai was empty
+                                i = -1  # try again to send first message
+                                continue
+                            else:
+                                sent_message = await update.message.reply_text(answer)
+                    else:  # edit sent message
+                        # update only when 100 new symbols are ready
+                        if abs(len(answer) - len(prev_answer)) < 100 and status != "finished":
+                            continue
+
+                        try:                    
+                            await context.bot.edit_message_text(answer, chat_id=sent_message.chat_id, message_id=sent_message.message_id, parse_mode=parse_mode)
+                        except telegram.error.BadRequest as e:
+                            if str(e).startswith("Message is not modified"):
+                                continue
+                            else:
+                                await context.bot.edit_message_text(answer, chat_id=sent_message.chat_id, message_id=sent_message.message_id)
+
+                        await asyncio.sleep(0.01)  # wait a bit to avoid flooding
+                        
+                    prev_answer = answer
+
+                # update user data
+                new_dialog_message = {"user": message, "bot": answer, "date": datetime.now()}
+                db.set_dialog_messages(
+                    user_id,
+                    db.get_dialog_messages(user_id, dialog_id=None) + [new_dialog_message],
+                    dialog_id=None
+                )
+                
+                n_used_tokens_last_message = n_used_tokens
+                
+                db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+                
+                price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
+                # Получить текущий курс usd to rub
+                old_answer = []
+                # old_answer = ["Число месяца: str", Курс usd: float]
+
+                n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+                
+                s_date = db.get_user_attribute(user_id, 's_date')
+                usd_rate = db.get_user_attribute(user_id, 'usd_rate')
+
+                old_answer.append(s_date)
+                old_answer.append(usd_rate)
+
+                new_answer = usd_rate_check(old_answer)
+
+                s_date = new_answer[0]
+                usd_rate = new_answer[1]
+                
+                db.set_user_attribute(user_id, 's_date', s_date)
+                db.set_user_attribute(user_id, 'usd_rate', usd_rate)
+                
+                rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
+                n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
+                
+                text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate}руб.</b>\n\n'
+                text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f}руб.</b>\n"
+                text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
+                text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
+            
+                # await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+                
         except Exception as e:
             error_text = f"Что-то пошло не так. Ошибка: {e}"
             logger.error(error_text)
@@ -461,6 +537,8 @@ async def show_balance_handle(update: Update, context: CallbackContext):
 
     text = f"Вы потратили <b>{n_spent_rub:.03f}руб.</b>\n"
     text += f"Вы использовали <b>{n_used_tokens}</b> токенов\n\n"
+    
+    text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate}руб.</b>\n\n'
 
     text += "🏷️ Prices\n"
     text += f"<i>- ChatGPT: {rub_rate_per_1000_tokens}руб. за 1000 токенов\n"
@@ -498,6 +576,7 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
                 await context.bot.send_message(update.effective_chat.id, message_chunk)
     except:
         await context.bot.send_message(update.effective_chat.id, "Some error in error handler")
+    
 
 async def post_init(application: Application):
     await application.bot.set_my_commands([
