@@ -35,8 +35,9 @@ Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 
 
 ## Commands for admins:
-- /reset {user_id} – Обнулить лимит у юзера
-- /users – Получить список всех юзеров
+- /reset user_id – Обнулить лимит токенов у юзера
+- /add user_id amount – Пополнить лимит токенов у юзера
+- /users – Получить csv-файл со списком юзеров
 - /helpa – Помощь
 
 

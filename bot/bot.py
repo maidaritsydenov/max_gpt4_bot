@@ -57,7 +57,7 @@ HELP_MESSAGE = """Commands:
 HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
 ⚪ /reset user_id – Обнулить лимит токенов у юзера
 ⚪ /add user_id amount – Пополнить лимит токенов у юзера
-⚪ /users – Получить файл-список всех юзеров
+⚪ /users – Получить csv-файл со списком юзеров
 ⚪ /helpa – Помощь
 """
 
