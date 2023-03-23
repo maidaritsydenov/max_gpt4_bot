@@ -6,10 +6,11 @@
 <a href="https://t.me/max_gpt4_bot" alt="Run Telegram Bot shield"><img src="https://img.shields.io/badge/RUN-Telegram%20Bot-blue" /></a>
 </p>
 
-# The project is under development
+# Telegram Bot MaxBot (MidJourney, ChatGPT, etc.)
+## The project is under development
 
-### Telegram bot MaxBot [@max_gpt4_bot](https://t.me/max_gpt4_bot)
-### Telegram test bot MaxBot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
+Telegram bot [@max_gpt4_bot](https://t.me/max_gpt4_bot)
+Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 
 
 ## Features
@@ -103,7 +104,10 @@ sudo docker compose up -d --build
 ```
 
 
-### Documentation: [chat.openai.com](https://chat.openai.com)
+### Documentation:
+* [chat.openai.com](https://chat.openai.com)
+* [sbercloud.ru/ru/aicloud/salutespeech](https://developers.sber.ru/docs/ru/salutespeech/category-overview)
+
 
 ### Authors:
 1. Maidari Tsydenov
