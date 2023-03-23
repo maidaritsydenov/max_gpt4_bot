@@ -14,6 +14,7 @@ config_env = dotenv.dotenv_values(config_dir / "config.env")
 # config parameters
 telegram_token = config_yaml["telegram_token"]
 openai_api_key = config_yaml["openai_api_key"]
+payment_token = config_yaml["payment_token"]
 
 SBER_SALUTE_TOKEN = config_yaml['SBER_SALUTE_TOKEN']
 SBER_SALUTE_SCOPE = config_yaml['SBER_SALUTE_SCOPE']
@@ -22,6 +23,7 @@ PATH_TO_SERT_WINDOWS = config_yaml['PATH_TO_SERT_WINDOWS']
 
 use_chatgpt_api = config_yaml.get("use_chatgpt_api", True)
 admin_ids = config_yaml['admin_ids']
+paid_ids = config_yaml['paid_ids']
 allowed_telegram_usernames = config_yaml["allowed_telegram_usernames"]
 new_dialog_timeout = config_yaml["new_dialog_timeout"]
 enable_message_streaming = config_yaml.get("enable_message_streaming", True)

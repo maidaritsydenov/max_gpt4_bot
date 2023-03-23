@@ -122,4 +122,23 @@ class Database:
             user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
             user_list_csv.append(user_attr)
             count += 1
-        return user_list_csv, count
+        return user_list_csv, count - 1
+    
+    def update_balance_every_monday(self):
+        user_ids_list = []
+        for user in self.user_collection.find():
+            user_id = user['_id']
+            if self.get_user_attribute(user_id, 'token_limit') < 10000:
+                self.set_user_attribute(user_id, 'token_limit', 10000)
+                user_ids_list.append[user_id]
+        return user_ids_list
+    
+    def send_update_notice(self):
+        user_ids_list = []
+        for user in self.user_collection.find():
+            user_ids_list.append(int(user['_id']))
+        return user_ids_list
+            
+            
+            
+        

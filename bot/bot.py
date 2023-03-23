@@ -8,7 +8,7 @@ import json
 import tempfile
 import pydub
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import telegram
 from telegram import (
@@ -16,7 +16,9 @@ from telegram import (
     User, 
     InlineKeyboardButton, 
     InlineKeyboardMarkup, 
-    BotCommand
+    BotCommand,
+    LabeledPrice,
+    ShippingOption
 )
 from telegram.ext import (
     Application,
@@ -26,7 +28,10 @@ from telegram.ext import (
     MessageHandler,
     CallbackQueryHandler,
     AIORateLimiter,
-    filters
+    filters,
+    PreCheckoutQueryHandler,
+    ShippingQueryHandler,
+    ContextTypes
 )
 from telegram.constants import ParseMode, ChatAction
 
@@ -51,13 +56,14 @@ HELP_MESSAGE = """Commands:
 ⚪ /mode – Выбрать роль 🎭
 ⚪ /balance – Показать баланс 💰
 ⚪ /help – Помощь 🆘
-⚪ /pay – Купить пакет токенов 💳
+⚪ /buy – Купить пакет токенов 💳
 """
 
 HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
 ⚪ /reset user_id – Обнулить лимит токенов у юзера
 ⚪ /add user_id amount – Пополнить лимит токенов у юзера
 ⚪ /users – Получить csv-файл со списком юзеров
+⚪ /send_notice_to_all text - Отправить text всем юзерам
 ⚪ /helpa – Помощь
 """
 
@@ -90,7 +96,7 @@ async def check_token_limit(update: Update, context: CallbackContext):
     balance = db.get_user_attribute(user_id, 'token_limit')
 
     if balance <= ZERO and user_id not in config.admin_ids:
-        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на этой неделе.\n\nВы можете подождать обновления токенов или купить безлимитный пакет токенов за 499 рублей /pay."
+        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на этой неделе.\n\nВы можете подождать обновления токенов или купить пакет '100 000' токенов за 399 рублей /buy."
         await update.message.reply_text(text, parse_mode=ParseMode.HTML)
         db.set_user_attribute(user_id, 'token_limit', ZERO)
         return False
@@ -183,12 +189,114 @@ async def send_users_list_for_admin(update: Update, context: CallbackContext):
         return
 
 
-async def payment_system():
-    pass
+async def buy_callback(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Отправка инвойса без оплаты доставки."""
+    chat_id = update.message.chat_id
+    title = "Оплата токенов"
+    description = "🔘 Пакет 100 000 токенов"
+    # select a payload just for you to recognize its the donation from your bot
+    payload = "Custom-Payload"
+    # In order to get a provider_token see https://core.telegram.org/bots/payments#getting-a-token
+    currency = "RUB"
+    # price in dollars
+    price = 399
+    # price * 100 so as to include 2 decimal points
+    prices = [LabeledPrice("100 000 токенов", price * 100)]
+
+    # optionally pass need_name=True, need_phone_number=True,
+    # need_email=True, need_shipping_address=True, is_flexible=True
+    await context.bot.send_invoice(
+        chat_id, title, description, payload, config.payment_token, currency, prices
+    )
 
 
-async def add_token_limit_every_monday():
-    pass
+async def shipping_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Answers the ShippingQuery with ShippingOptions"""
+    query = update.shipping_query
+    # check the payload, is this from your bot?
+    if query.invoice_payload != "Custom-Payload":
+        # answer False pre_checkout_query
+        await query.answer(ok=False, error_message="Something went wrong...")
+        return
+
+    # First option has a single LabeledPrice
+    options = [ShippingOption("1", "Shipping Option A", [LabeledPrice("A", 100)])]
+    # second option has an array of LabeledPrice objects
+    price_list = [LabeledPrice("B1", 150), LabeledPrice("B2", 200)]
+    options.append(ShippingOption("2", "Shipping Option B", price_list))
+    await query.answer(ok=True, shipping_options=options)
+
+
+
+# after (optional) shipping, it's the pre-checkout
+async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Answers the PreQecheckoutQuery"""
+    query = update.pre_checkout_query
+    # check the payload, is this from your bot?
+    if query.invoice_payload != "Custom-Payload":
+        # answer False pre_checkout_query
+        await query.answer(ok=False, error_message="Something went wrong...")
+    else:
+        await query.answer(ok=True)
+
+
+# finally, after contacting the payment provider...
+async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Confirms the successful payment."""
+    user_id = update.message.from_user.id
+    config.paid_ids.append(user_id)
+    db.set_user_attribute(user_id, 'token_limit', 100000)
+
+    await update.message.reply_text(f"Спасибо за платеж!\n\nПроверить баланс /balance")
+
+
+async def update_token_limit_every_monday_at_ten_am(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_id = update.message.from_user.id
+    # вычисляем время до ближайшего понедельника 10:00 утра
+    now = datetime.now()
+    monday = now + timedelta(days=(7 - now.weekday()))
+    monday = monday.replace(hour=10, minute=0, second=0, microsecond=0)
+    time_until_monday = (monday - now).total_seconds()
+    
+
+    # ждем до понедельника 10:00 утра
+    await asyncio.sleep(time_until_monday)
+    
+    # обновляем баланс токенов каждого пользователя на 10000 токенов
+    user_ids_list = db.update_balance_every_monday()
+    
+    text='Ваш баланс равен 10 000 токенов!\n\nБаланс пополняется каждый понедельник в 10:00 по МСК.\nКупить 100 000 токенов /buy'
+    for user_id in user_ids_list:
+        await context.bot.send_message(user_id, text)
+
+
+async def send_update_notice(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    chat_id=update.effective_chat.id
+    text="Используйте следующую конструкцию:\n\n<code>/send_notice_to_all {text}</code>"
+    
+    if user_id in config.admin_ids:
+        try:
+            if not context.args:
+                await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+                return
+            else:
+                text = ' '.join(map(str, context.args))
+                user_ids_list = db.send_update_notice()
+                
+                for user_id in user_ids_list:
+                    await context.bot.send_message(user_id, text, parse_mode=ParseMode.HTML)
+
+        except ValueError:
+            text="Используйте следующую конструкцию:\n\n<code>/send_notice_to_all {text}</code>. Добавить функцию загрузки фото, видео или гиф"
+            await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            return
+    else:            
+        await update.message.reply_text("Эта команда доступна только администраторам.")
+        return
 
 
 async def start_handle(update: Update, context: CallbackContext):
@@ -711,8 +819,9 @@ async def post_init(application: Application):
         BotCommand("/retry", "Восстановить предыдущий диалог ◀️"),
         BotCommand("/balance", "Показать баланс 💰"),
         BotCommand("/help", "Помощь 🆘"),
-        BotCommand("/pay", "Купить пакет токенов 💳"),
+        BotCommand("/buy", "Купить пакет токенов 💳"),
     ])
+
 
 def run_bot() -> None:
     application = (
@@ -734,11 +843,27 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
     application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
     
+    # Payment system
+    # Add command handler to start the payment invoice
+    application.add_handler(CommandHandler("buy", buy_callback))
+
+    # Optional handler if your product requires shipping
+    application.add_handler(ShippingQueryHandler(shipping_callback))
+
+    # Pre-checkout handler to final check
+    application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
+
+    # Success! Notify your user!
+    application.add_handler(
+        MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback)
+    )
+    
     # admin system
     application.add_handler(CommandHandler("reset", reset_token_limit, filters=user_filter))
     application.add_handler(CommandHandler("helpa", help_handle_for_admins, filters=user_filter))
     application.add_handler(CommandHandler("users", send_users_list_for_admin, filters=user_filter))
     application.add_handler(CommandHandler("add", add_token_limit_by_id, filters=user_filter))
+    application.add_handler(CommandHandler("send_notice_to_all", send_update_notice, filters=user_filter))
     
 
     application.add_handler(MessageHandler((filters.Regex(f'{config.DALLE_GROUP}') ^ filters.Regex(f'{config.DALLE_PRIVATE}')) & ~filters.COMMAND & user_filter, dalle))

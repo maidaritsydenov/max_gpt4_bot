@@ -123,7 +123,7 @@ class sberSaluteSpeech:
                 
                         status = response['status']
                         status_at = response['result']['status']
-                        print(f' Попытка: {try_num}')
+                        print(f' Попытка: {try_num + 1}')
                         print(status, status_at)
 
                         if try_num > 5:
