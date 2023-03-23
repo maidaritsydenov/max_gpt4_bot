@@ -115,10 +115,11 @@ class Database:
 
     def get_users_list(self, user_id: int):
         self.check_if_user_exists(user_id, raise_exception=True)
-        users = []
+        user_list_csv = []
         count = 1
-
+        
         for user in self.user_collection.find():
-            users.append(f"{count}. <code>{user['_id']}</code> @{user['username']} ({user['first_name']} {user['last_name']})\nПоследнее использование: {str(user['last_interaction'])[:16:]}\nВсего использовано токенов: {user['n_used_tokens']}\n")
+            user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
+            user_list_csv.append(user_attr)
             count += 1
-        return users
+        return user_list_csv, count

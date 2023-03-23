@@ -19,6 +19,7 @@ PATH_TO_SERT_WINDOWS: "C:/Users/user/Downloads/russian_trusted_root_ca.cer"
 chatgpt_price_per_1000_tokens: 0.002
 gpt_price_per_1000_tokens: 0.02
 whisper_price_per_1_min: 0.006
+dalle_price_per_one_image: 0.020
 
 
 # Кодовые фразы для групп

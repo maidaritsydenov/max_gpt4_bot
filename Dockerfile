@@ -17,6 +17,7 @@ ADD . /code
 WORKDIR /code
 RUN mkdir -p /code/text_messages
 RUN mkdir -p /code/voice_messages
+RUN mkdir -p /code/users
 
 RUN pip3 install -r requirements.txt
 

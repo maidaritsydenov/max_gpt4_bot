@@ -35,6 +35,7 @@ with open(config_dir / "chat_modes.yml", 'r') as f:
 chatgpt_price_per_1000_tokens = config_yaml.get("chatgpt_price_per_1000_tokens", 0.002)
 gpt_price_per_1000_tokens = config_yaml.get("gpt_price_per_1000_tokens", 0.02)
 whisper_price_per_1_min = config_yaml.get("whisper_price_per_1_min", 0.006)
+dalle_price_per_one_image = config_yaml.get("dalle_price_per_one_image", 0.020)
 
 # code phrases
 CHATGPT_GROUP = config_yaml.get("CHATGPT_GROUP")
