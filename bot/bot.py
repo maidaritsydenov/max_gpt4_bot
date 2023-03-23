@@ -42,13 +42,21 @@ from synthesis import main
 db = database.Database()
 logger = logging.getLogger(__name__)
 user_semaphores = {}
-
+ZERO = 0
 HELP_MESSAGE = """Commands:
-⚪ /retry – Восстановить последний диалог
-⚪ /new – Начать новый диалог
-⚪ /mode – Выбрать роль
-⚪ /balance – Показать баланс
-⚪ /help – Помощь
+⚪ /retry – Восстановить последний диалог ◀️
+⚪ /new – Начать новый диалог 🆕
+⚪ /mode – Выбрать роль 🎭
+⚪ /balance – Показать баланс 💰
+⚪ /help – Помощь 🆘
+⚪ /pay – Купить пакет токенов 💳
+"""
+
+HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
+⚪ /reset {user_id} – Обнулить лимит у юзера
+⚪ /users – Получить список всех юзеров
+⚪ /helpa – Помощь
+
 """
 
 
@@ -75,12 +83,76 @@ async def register_user_if_not_exists(update: Update, context: CallbackContext, 
         user_semaphores[user.id] = asyncio.Semaphore(1)
 
 
+async def check_token_limit(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    balance = db.get_user_attribute(user_id, 'token_limit')
+
+    if balance <= ZERO and user_id not in config.admin_ids:
+        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на этой неделе.\n\nВы можете подождать обновления токенов или купить безлимитный пакет токенов за 499 рублей /pay."
+        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+        db.set_user_attribute(user_id, 'token_limit', ZERO)
+        return False
+    return True
+
+
+async def reset_token_limit(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    chat_id=update.effective_chat.id
+    text="Используйте следующую конструкцию:\n\n<code>/reset {user_id}</code>"
+    
+    if user_id in config.admin_ids:
+        try:
+            if not context.args:
+                await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+                return
+            else:
+                int(context.args[0])
+
+        except ValueError:
+            text="Используйте следующую конструкцию:\n\n<code>/reset {user_id}</code>\n<code>{user_id}</code> должен быть числом."
+            await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            return
+        
+        if not db.check_if_user_exists(int(context.args[0])):
+            text=f"Пользователь с user_id: <code>{int(context.args[0])}</code> не зарегистрирован"
+            await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            return
+        else:
+            db.set_user_attribute(int(context.args[0]), 'token_limit', ZERO)
+            text=f"Баланс пользователя с user_id: <code>{int(context.args[0])}</code> обнулен!"
+            await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+    else:            
+        await update.message.reply_text("Эта команда доступна только администраторам.")
+        return
+
+async def add_token_limit_by_id():
+    pass
+
+async def add_token_limit_every_monday():
+    pass
+
+async def send_users_list_for_admin(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    chat_id=update.effective_chat.id
+    if user_id in config.admin_ids:
+        users = db.get_users_list(user_id)
+        user_list = "\n".join(users)
+        await context.bot.send_message(chat_id, user_list, parse_mode=ParseMode.HTML)
+    else:
+        await update.message.reply_text("Эта команда доступна только администраторам.")
+        return
+
+async def payment_system():
+    pass
+
+
 async def start_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
     
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     db.start_new_dialog(user_id)
+    balance = db.get_user_attribute(user_id, "token_limit")
     
     reply_text = "Привет! Я <b>Макс,</b> бот реализованный с помщью GPT-3.5 OpenAI API 🤖\n\n"    
     
@@ -88,14 +160,16 @@ async def start_handle(update: Update, context: CallbackContext):
     chat_id = str(update.effective_chat.id)
     ch = '-'
     if ch in chat_id:
-        reply_text += "✴️ Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением, используя слово <code>Макс, '''ВАШ ЗАПРОС'''</code> \n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение\n<code>Макс, нарисуй '''ВАШ ЗАПРОС'''</code>\n\n✴️ Я могу отправить тебе <b>голосовое</b>. Для этого используй конструкцию <code>Расскажи '''ВАШ ЗАПРОС'''</code>\n<i>*Используй английский язык для повышения качества ответа*</i>\n"
+        reply_text += "Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением, используя слово <code>Макс, '''ВАШ ЗАПРОС'''</code> \n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение <code>Макс, нарисуй '''ВАШ ЗАПРОС'''</code>\n\n✴️ Я могу отправить тебе <b>голосовое</b>. Для этого используй конструкцию <code>Расскажи '''ВАШ ЗАПРОС'''</code>\n\n<i>*Используй английский язык для повышения качества ответа*</i>\n"
     
     elif ch not in chat_id:
-        reply_text += "✴️ Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением\n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение\n<code>Нарисуй '''ВАШ ЗАПРОС'''</code>\n\n✴️ Я могу отправить тебе <b>голосовое</b>. Для этого используй конструкцию <code>Расскажи '''ВАШ ЗАПРОС'''</code>\n<i>*Используй английский язык для повышения качества ответа*</i>\n"
+        reply_text += "Меня можно применять практически к любой задаче, связанной с пониманием или созданием естественного языка, кода или изображения.\n\n✴️ Спроси меня о чем нибудь <b>текстовым</b> или <b>голосовым</b> сообщением\n\n✴️ Я могу нарисовать <b>изображение</b>. Для этого отправь мне сообщение <code>Нарисуй '''ВАШ ЗАПРОС'''</code>\n\n✴️ Я могу отправить тебе <b>голосовое</b>. Для этого используй конструкцию <code>Расскажи '''ВАШ ЗАПРОС'''</code>\n\n<i>*Используй английский язык для повышения качества ответа*</i>\n"
     
     else:
         reply_text = 'В <b>приватных чатах</b> используй конструкцию <code>Нарисуй</code> для генерации изображения или любое текстовое или голосовое сообщение\n\nВ <b>группах</b> используй конструкцию <code>Макс, </code> или <code>Макс, нарисуй</code> для генерации изображения'
-        
+    
+    reply_text += f'\n\nДоступно токенов: <b>{balance}</b>\n<i>Токены обновляются каждый понедельник в 10:00 по МСК.</i>'
+    
     reply_text += f'\n\n{HELP_MESSAGE}'
     
     await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
@@ -106,6 +180,16 @@ async def help_handle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     await update.message.reply_text(HELP_MESSAGE, parse_mode=ParseMode.HTML)
+
+async def help_handle_for_admins(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_id = update.message.from_user.id
+    if user_id in config.admin_ids:
+        db.set_user_attribute(user_id, "last_interaction", datetime.now())
+        await update.message.reply_text(HELP_MESSAGE_FOR_ADMINS, parse_mode=ParseMode.HTML)
+        return
+    await update.message.reply_text("Эта команда доступна только администраторам.")
+    return
 
 
 async def retry_handle(update: Update, context: CallbackContext):
@@ -133,6 +217,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         return
         
     await register_user_if_not_exists(update, context, update.message.from_user)
+    if not await check_token_limit(update, context): return
     if await is_previous_message_not_answered_yet(update, context): return
 
     user_id = update.message.from_user.id
@@ -210,37 +295,44 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                 n_used_tokens_last_message = n_used_tokens
                 
                 db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+                db.set_user_attribute(user_id, "token_limit", db.get_user_attribute(user_id, "token_limit") - n_used_tokens_last_message)
                 
                 price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
-                # Получить текущий курс usd to rub
-                old_answer = []
-                # old_answer = ["Число месяца: str", Курс usd: float]
-
-                n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
                 
-                s_date = db.get_user_attribute(user_id, 's_date')
-                usd_rate = db.get_user_attribute(user_id, 'usd_rate')
-
-                old_answer.append(s_date)
-                old_answer.append(usd_rate)
-
-                new_answer = usd_rate_check(old_answer)
-
-                s_date = new_answer[0]
-                usd_rate = new_answer[1]
                 
-                db.set_user_attribute(user_id, 's_date', s_date)
-                db.set_user_attribute(user_id, 'usd_rate', usd_rate)
+
+                # # Получить текущий курс usd to rub
+                # old_answer = []
+                # # old_answer = ["Число месяца: str", Курс usd: float]
+
+                # n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
                 
-                rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
-                n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
+                # s_date = db.get_user_attribute(user_id, 's_date')
+                # usd_rate = db.get_user_attribute(user_id, 'usd_rate')
+
+                # old_answer.append(s_date)
+                # old_answer.append(usd_rate)
+
+                # new_answer = usd_rate_check(old_answer)
+
+                # s_date = new_answer[0]
+                # usd_rate = new_answer[1]
                 
-                text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate}руб.</b>\n\n'
-                text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f}руб.</b>\n"
-                text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
-                text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
+                # db.set_user_attribute(user_id, 's_date', s_date)
+                # db.set_user_attribute(user_id, 'usd_rate', usd_rate)
+                
+                # rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
+                # n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
+                
+                # text = f'\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate} руб.</b>\n\n'
+                # text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f} руб.</b>\n"
+                # text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
+                # text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
             
                 # await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+
+
 
             else:
                 if config.enable_message_streaming:
@@ -308,35 +400,38 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                 n_used_tokens_last_message = n_used_tokens
                 
                 db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+                db.set_user_attribute(user_id, "token_limit", db.get_user_attribute(user_id, "token_limit") - n_used_tokens_last_message)
                 
                 price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
-                # Получить текущий курс usd to rub
-                old_answer = []
-                # old_answer = ["Число месяца: str", Курс usd: float]
-
-                n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
                 
-                s_date = db.get_user_attribute(user_id, 's_date')
-                usd_rate = db.get_user_attribute(user_id, 'usd_rate')
 
-                old_answer.append(s_date)
-                old_answer.append(usd_rate)
+                # # Получить текущий курс usd to rub
+                # old_answer = []
+                # # old_answer = ["Число месяца: str", Курс usd: float]
 
-                new_answer = usd_rate_check(old_answer)
+                # n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+                
+                # s_date = db.get_user_attribute(user_id, 's_date')
+                # usd_rate = db.get_user_attribute(user_id, 'usd_rate')
 
-                s_date = new_answer[0]
-                usd_rate = new_answer[1]
+                # old_answer.append(s_date)
+                # old_answer.append(usd_rate)
+
+                # new_answer = usd_rate_check(old_answer)
+
+                # s_date = new_answer[0]
+                # usd_rate = new_answer[1]
                 
-                db.set_user_attribute(user_id, 's_date', s_date)
-                db.set_user_attribute(user_id, 'usd_rate', usd_rate)
+                # db.set_user_attribute(user_id, 's_date', s_date)
+                # db.set_user_attribute(user_id, 'usd_rate', usd_rate)
                 
-                rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
-                n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
+                # rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
+                # n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
                 
-                text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate}руб.</b>\n\n'
-                text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f}руб.</b>\n"
-                text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
-                text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
+                # text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate} руб.</b>\n\n'
+                # text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f} руб.</b>\n"
+                # text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
+                # text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
             
                 # await update.message.reply_text(text, parse_mode=ParseMode.HTML)
                 
@@ -378,9 +473,14 @@ async def dalle(update: Update, context):
     #     return
 
     await register_user_if_not_exists(update, context, update.message.from_user)
+    if not await check_token_limit(update, context): return
     
     await update.message.chat.send_action(action="upload_photo")
 
+
+    ### ДОБАВИТЬ УЧЕТ ТОКЕНОВ
+    
+    
     prompt = ''.join(update.message.text)
     chat_id = str(update.effective_chat.id)
     ch = '-'
@@ -418,6 +518,7 @@ async def dalle(update: Update, context):
 
 
 async def voice_message_handle(update: Update, context: CallbackContext):
+
     chat_id = str(update.effective_chat.id)
     ch = '-'
     if (ch in chat_id):
@@ -426,6 +527,9 @@ async def voice_message_handle(update: Update, context: CallbackContext):
     else:
         await register_user_if_not_exists(update, context, update.message.from_user)
         if await is_previous_message_not_answered_yet(update, context): return
+        
+        if not await check_token_limit(update, context): return
+
 
         user_id = update.message.from_user.id
         db.set_user_attribute(user_id, "last_interaction", datetime.now())
@@ -459,6 +563,8 @@ async def voice_message_handle(update: Update, context: CallbackContext):
         price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
         n_used_tokens = int(n_spent_dollars / (price_per_1000_tokens / 1000))
         db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+        db.set_user_attribute(user_id, "token_limit", db.get_user_attribute(user_id, "token_limit") - n_used_tokens)
+        
 
 
 async def new_dialog_handle(update: Update, context: CallbackContext):
@@ -532,17 +638,18 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     
     rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
     n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
- 
 
+    balance = db.get_user_attribute(user_id, 'token_limit')
 
-    text = f"Вы потратили <b>{n_spent_rub:.03f}руб.</b>\n"
-    text += f"Вы использовали <b>{n_used_tokens}</b> токенов\n\n"
+    text = f'💰 Ваш баланс: <b>{balance}</b> токенов.\n'
+    # text += f"Вы потратили <b>{n_spent_rub:.03f} руб.</b>\n"
+    # text += f"Вы использовали <b>{n_used_tokens}</b> токенов\n\n"
     
-    text = f'Для отладки:\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate}руб.</b>\n\n'
+    text += f'💲 Курс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate:.02f} руб.</b>\n\n'
 
     text += "🏷️ Prices\n"
-    text += f"<i>- ChatGPT: {rub_rate_per_1000_tokens}руб. за 1000 токенов\n"
-    text += f"- Whisper (voice recognition): {config.whisper_price_per_1_min * usd_rate}руб. за 1 минуту</i>"
+    text += f"<i>- ChatGPT: {rub_rate_per_1000_tokens:.02f} руб. за 1000 токенов\n"
+    text += f"- Whisper (voice recognition): {(config.whisper_price_per_1_min * usd_rate):.02f} руб. за 1 минуту</i>"
 
     await update.message.reply_text(text, parse_mode=ParseMode.HTML) 
 
@@ -580,11 +687,12 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
 
 async def post_init(application: Application):
     await application.bot.set_my_commands([
-        BotCommand("/new", "Начать новый диалог"),
-        BotCommand("/mode", "Выбрать роль"),
-        BotCommand("/retry", "Восстановить предыдущий диалог"),
-        BotCommand("/balance", "Показать баланс"),
-        BotCommand("/help", "Помощь"),
+        BotCommand("/new", "Начать новый диалог 🆕"),
+        BotCommand("/mode", "Выбрать роль 🎭"),
+        BotCommand("/retry", "Восстановить предыдущий диалог ◀️"),
+        BotCommand("/balance", "Показать баланс 💰"),
+        BotCommand("/help", "Помощь 🆘"),
+        BotCommand("/pay", "Купить пакет токенов 💳"),
     ])
 
 def run_bot() -> None:
@@ -606,6 +714,10 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
     application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
+    application.add_handler(CommandHandler("reset", reset_token_limit, filters=user_filter))
+    application.add_handler(CommandHandler("helpa", help_handle_for_admins, filters=user_filter))
+    application.add_handler(CommandHandler("users", send_users_list_for_admin, filters=user_filter))
+    
 
     application.add_handler(MessageHandler((filters.Regex(f'{config.DALLE_GROUP}') ^ filters.Regex(f'{config.DALLE_PRIVATE}')) & ~filters.COMMAND & user_filter, dalle))
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.COMMAND & ~filters.VOICE & ~filters.AUDIO & ~filters.VIDEO & ~filters.VIDEO_NOTE & user_filter, message_handle))

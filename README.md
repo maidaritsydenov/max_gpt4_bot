@@ -77,7 +77,7 @@ cp config/config.yml.example config/config.yml
 config.yml:
 telegram_token: ""
 openai_api_key: ""
-SBER_SALUTE_TOKEN
+SBER_SALUTE_TOKEN: ""
 
 
 

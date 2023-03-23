@@ -21,6 +21,7 @@ PATH_TO_SERT_LINUX = config_yaml['PATH_TO_SERT_LINUX']
 PATH_TO_SERT_WINDOWS = config_yaml['PATH_TO_SERT_WINDOWS']
 
 use_chatgpt_api = config_yaml.get("use_chatgpt_api", True)
+admin_ids = config_yaml['admin_ids']
 allowed_telegram_usernames = config_yaml["allowed_telegram_usernames"]
 new_dialog_timeout = config_yaml["new_dialog_timeout"]
 enable_message_streaming = config_yaml.get("enable_message_streaming", True)

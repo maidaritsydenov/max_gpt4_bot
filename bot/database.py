@@ -49,7 +49,9 @@ class Database:
             "n_used_tokens": 0,
 
             "s_date": int(str(datetime.now())[8:10:]) + 1,
-            "usd_rate": 75.0
+            "usd_rate": 75.0,
+            
+            "token_limit": 5000
         }
 
         if not self.check_if_user_exists(user_id):
@@ -110,3 +112,13 @@ class Database:
             {"_id": dialog_id, "user_id": user_id},
             {"$set": {"messages": dialog_messages}}
         )
+
+    def get_users_list(self, user_id: int):
+        self.check_if_user_exists(user_id, raise_exception=True)
+        users = []
+        count = 1
+
+        for user in self.user_collection.find():
+            users.append(f"{count}. <code>{user['_id']}</code> @{user['username']} ({user['first_name']} {user['last_name']})\nПоследнее использование: {str(user['last_interaction'])[:16:]}\nВсего использовано токенов: {user['n_used_tokens']}\n")
+            count += 1
+        return users
