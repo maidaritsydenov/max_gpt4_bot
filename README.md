@@ -20,8 +20,6 @@ Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 - StableDiffusion
 - Kaiber AI
 - Track balance spent on OpenAI API
-- Payment system
-- Admin system
 - New design (inline buttons, new pics, main menu, wallet)
 
 
@@ -35,9 +33,10 @@ Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 
 
 ## Commands for admins:
-- /reset user_id – Обнулить лимит токенов у юзера
-- /add user_id amount – Пополнить лимит токенов у юзера
+- /reset {user_id} – Обнулить лимит токенов у юзера
+- /add {user_id} {amount} – Пополнить лимит токенов у юзера
 - /users – Получить csv-файл со списком юзеров
+- /send_notice_to_all {text} - Отправить text всем юзерам
 - /helpa – Помощь
 
 
