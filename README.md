@@ -1,7 +1,15 @@
+<p align="center">
+<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/varfix-ai-chatbot-gpt-3.png" width="100" height="100" /></a>
+</p>
+
+<p align="center">
+<a href="https://t.me/max_gpt4_bot" alt="Run Telegram Bot shield"><img src="https://img.shields.io/badge/RUN-Telegram%20Bot-blue" /></a>
+</p>
+
 # The project is under development
 
-# Telegram Bot MaxBot [@max_gpt4_bot](https://t.me/max_gpt4_bot)
-## Test Bot MaxBot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
+### Telegram bot MaxBot [@max_gpt4_bot](https://t.me/max_gpt4_bot)
+### Telegram test bot MaxBot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 
 
 ## Features
@@ -15,17 +23,20 @@
 - Admin system
 - New design (inline buttons, new pics, main menu, wallet)
 
-<p align="center">
-<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/varfix-ai-chatbot-gpt-3.png" width="100" height="100" /></a>
-</p>
 
-<p align="center">
-<a href="https://t.me/max_gpt4_bot" alt="Run Telegram Bot shield"><img src="https://img.shields.io/badge/RUN-Telegram%20Bot-blue" /></a>
-</p>
+## Commands:
+- /retry – Восстановить последний диалог ◀️
+- /new – Начать новый диалог 🆕
+- /mode – Выбрать роль 🎭
+- /balance – Показать баланс 💰
+- /help – Помощь 🆘
+- /pay – Купить пакет токенов 💳
 
 
-Documentation: [chat.openai.com](https://chat.openai.com)
-You can use mine bot: [@max_gpt4_bot](https://t.me/max_gpt4_bot)
+## Commands for admins:
+- /reset {user_id} – Обнулить лимит у юзера
+- /users – Получить список всех юзеров
+- /helpa – Помощь
 
 
 # Usage
@@ -37,28 +48,7 @@ You can use mine bot: [@max_gpt4_bot](https://t.me/max_gpt4_bot)
 1. Аналогично, но с добавлением слова "Макс, " (Макс, | Макс, нарисуй | Макс, расскажи)
 
 
-# Deploy
-
-## Локально
-* Перейти в папку проекта и скопировать файлы конфига
-```
-cd max_gpt4_bot
-cp config/config.env.example config/config.env
-cp config/config.yml.example config/config.yml
-```
-
-* Заполнить следующие константы:
-config.yml:
-- telegram_token: ""
-- openai_api_key: ""
-- SBER_SALUTE_TOKEN: ""
-
-* Выполнить сборку и запуск контейнеров
-```
-sudo docker compose up -d --build
-```
-
-## На сервер
+# Deploy to server
 ### TODO: Добавить GitHub workflow для автодеплоя на сервер
 
 * Зайти на сервер
@@ -85,8 +75,14 @@ sudo chmod +x /usr/local/bin/docker-compose
 ```
 
 * Создать ssh-key и добавить на GitHub
+```
+ssh-keygen
+```
 
 * Склонировать репозиторий на сервер
+```
+git clone git@github.com:{username}/max_gpt4_bot.git
+```
 
 * Перейти в папку проекта и скопировать файлы конфига
 ```
@@ -107,8 +103,10 @@ sudo docker compose up -d --build
 ```
 
 
+### Documentation: [chat.openai.com](https://chat.openai.com)
+
 ### Authors:
-<h4> Maidari Tsydenov </h4>
+1. Maidari Tsydenov
 
 <h4>Contact me:</h4>
 
