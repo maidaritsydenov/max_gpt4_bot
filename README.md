@@ -7,7 +7,7 @@
 </p>
 
 # Telegram Bot MaxBot (MidJourney, ChatGPT, etc.)
-## The project is under development
+### The project is under development
 
 Telegram bot [@max_gpt4_bot](https://t.me/max_gpt4_bot)
 Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
@@ -41,16 +41,16 @@ Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 
 
 ## Usage
-* В приватных чатах:
+В приватных чатах:
 1. Текстовое сообщение: Запрос текста - текст, Запрос изображения - "Нарисуй", Запрос голосового сообщения - "Расскажи"
 2. Голосовое сообщение: Запрос текста - голосовое сообщение
 
-* В группах:
+В группах:
 1. Аналогично, но с добавлением слова "Макс, " (Макс, | Макс, нарисуй | Макс, расскажи)
 
 
 ## Deploy to server
-### TODO: Добавить GitHub workflow для автодеплоя на сервер
+#### TODO: Добавить GitHub workflow для автодеплоя на сервер
 
 * Зайти на сервер
 ```
