@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/header.jpg" width="100" height="100" /></a>
+<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/header.jpg" width="1288" height="240" /></a>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@ Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 - New design (inline buttons, new pics, main menu, wallet)
 
 
-## Important - Создать коллекцию админов и коллекцию платных подписчиков. Изменить функции добавления в БД платных подписчиков
+### Important - Создать коллекцию админов и коллекцию платных подписчиков. Изменить функции добавления в БД платных подписчиков
 
 
 ## Commands:
