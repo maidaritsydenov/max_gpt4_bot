@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/maxima_gpt4_bot.gif" width="100" height="100" /></a>
+<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/varfix-ai-chatbot-gpt-3.png" width="100" height="100" /></a>
 </p>
 
 <p align="center">
@@ -42,6 +42,9 @@ Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 - /get_subs – Получить csv-файл со списком платных подписчиков
 - /send_notice_to_all text - Отправить text всем юзерам
 
+<p align="center">
+<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/maxima_gpt4_bot.gif" width="239" height="480" /></a>
+</p>
 
 ## Usage
 В приватных чатах:
@@ -52,7 +55,7 @@ Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
 
 В группах:
 ```
-Макс, | Макс, нарисуй | Макс, расскажи
+Макс, | Макс, нарисуй | Макс, расскажи)
 ```
 
 
