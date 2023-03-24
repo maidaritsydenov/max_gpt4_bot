@@ -1,3 +1,3 @@
 from datetime import datetime 
-now = datetime.now()
+now = int(str(datetime.now())[8:10:])
 print(now)

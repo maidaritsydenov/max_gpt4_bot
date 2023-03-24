@@ -48,7 +48,7 @@ class Database:
 
             "n_used_tokens": 0,
 
-            "s_date": int(str(datetime.now())[8:10:]) + 1,
+            "s_date": int(str(datetime.now())[8:10:]),
             "usd_rate": 75.0,
             
             "token_limit": 5000
@@ -124,13 +124,27 @@ class Database:
             count += 1
         return user_list_csv, count - 1
     
-    def update_balance_every_monday(self):
+    
+    def get_paid_subs_list(self, user_id: int, paid_subs_list: list):
+        self.check_if_user_exists(user_id, raise_exception=True)
+        paid_subs_list_csv = []
+        count = 1
+        
+        for user in self.user_collection.find():
+            if user['_id'] in paid_subs_list:
+                user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
+                paid_subs_list_csv.append(user_attr)
+                count += 1
+        return paid_subs_list_csv, count - 1
+
+    
+    def update_balance_every_day(self):
         user_ids_list = []
         for user in self.user_collection.find():
             user_id = user['_id']
             if self.get_user_attribute(user_id, 'token_limit') < 10000:
                 self.set_user_attribute(user_id, 'token_limit', 10000)
-                user_ids_list.append[user_id]
+                user_ids_list.append(user_id)
         return user_ids_list
     
     def send_update_notice(self):

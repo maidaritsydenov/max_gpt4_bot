@@ -1,4 +1,3 @@
-import os
 import csv
 import logging
 import asyncio
@@ -8,7 +7,7 @@ import json
 import tempfile
 import pydub
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 import telegram
 from telegram import (
@@ -31,9 +30,12 @@ from telegram.ext import (
     filters,
     PreCheckoutQueryHandler,
     ShippingQueryHandler,
-    ContextTypes
+    ContextTypes,
+    Updater,
+    Job,
+    JobQueue
 )
-from telegram.constants import ParseMode, ChatAction
+from telegram.constants import ParseMode
 
 import openai
 
@@ -48,27 +50,34 @@ from synthesis import main
 db = database.Database()
 logger = logging.getLogger(__name__)
 user_semaphores = {}
+
 ZERO = 0
 GROUP_ATTR = '-'
+CWD = Path.cwd()
+
 HELP_MESSAGE = """Commands:
 ⚪ /retry – Восстановить последний диалог ◀️
 ⚪ /new – Начать новый диалог 🆕
 ⚪ /mode – Выбрать роль 🎭
 ⚪ /balance – Показать баланс 💰
 ⚪ /help – Помощь 🆘
+⚪ /helpa – Помощь для администраторов 🆘
 ⚪ /buy – Купить пакет токенов 💳
+
 """
 
 HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
 ⚪ /reset user_id – Обнулить лимит токенов у юзера
 ⚪ /add user_id amount – Пополнить лимит токенов у юзера
-⚪ /users – Получить csv-файл со списком юзеров
+⚪ /get_users – Получить csv-файл со списком юзеров
+⚪ /get_subs – Получить csv-файл со списком платных подписчиков
 ⚪ /send_notice_to_all text - Отправить text всем юзерам
-⚪ /helpa – Помощь
 """
 
 
 def split_text_into_chunks(text, chunk_size):
+    """Функция разделяет текст на чанки."""
+
     for i in range(0, len(text), chunk_size):
         yield text[i:i + chunk_size]
 
@@ -92,11 +101,14 @@ async def register_user_if_not_exists(update: Update, context: CallbackContext, 
 
 
 async def check_token_limit(update: Update, context: CallbackContext):
+    """Функция проверяет token_limits перед каждым запросом пользователя,
+    Если пользователь превысил лимит - False (бот не реагирует на запросы)."""
+
     user_id = update.message.from_user.id
     balance = db.get_user_attribute(user_id, 'token_limit')
 
     if balance <= ZERO and user_id not in config.admin_ids:
-        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на этой неделе.\n\nВы можете подождать обновления токенов или купить пакет '100 000' токенов за 399 рублей /buy."
+        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на этой неделе.\n\nВы можете подождать ежедневного обновления токенов или купить пакет <b>100 000 токенов</b> за 399 рублей /buy."
         await update.message.reply_text(text, parse_mode=ParseMode.HTML)
         db.set_user_attribute(user_id, 'token_limit', ZERO)
         return False
@@ -104,6 +116,8 @@ async def check_token_limit(update: Update, context: CallbackContext):
 
 
 async def reset_token_limit(update: Update, context: CallbackContext):
+    """Функция для админа. Обнуление token_limit у юзера {user_id}."""
+
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
     text="Используйте следующую конструкцию:\n\n<code>/reset {user_id}</code>"
@@ -135,6 +149,8 @@ async def reset_token_limit(update: Update, context: CallbackContext):
 
 
 async def add_token_limit_by_id(update: Update, context: CallbackContext):
+    """Функция для админа. Добавление {amount} токенов к token_limit у юзера {user_id}."""
+
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
     text="Используйте следующую конструкцию:\n\n<code>/add {user_id} {amount}</code>"
@@ -167,12 +183,13 @@ async def add_token_limit_by_id(update: Update, context: CallbackContext):
 
 
 async def send_users_list_for_admin(update: Update, context: CallbackContext):
+    """Функция для админа. Отправляет файл со списком юзеров."""
+    
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
-    
-    cwd = Path.cwd()
-    path_to_users_file_linux = f'{cwd}/users/users.csv'
-    # path_to_users_file_windows = f'{cwd}/max_gpt4_bot/users/users.csv'
+
+    path_to_users_file_linux = f'{CWD}/users/users.csv'
+    # path_to_users_file_windows = f'{CWD}/max_gpt4_bot/users/users.csv'
     
     if user_id in config.admin_ids:
         user_list_csv, count = db.get_users_list(user_id)
@@ -187,12 +204,36 @@ async def send_users_list_for_admin(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("Эта команда доступна только администраторам.")
         return
+    
+
+async def send_paid_subs_list_for_admin(update: Update, context: CallbackContext):
+    """Функция для админа. Отправляет файл со списком платных подписчиков."""
+    
+    user_id = update.message.from_user.id
+    chat_id=update.effective_chat.id
+
+    path_to_users_file_linux = f'{CWD}/users/paid_subs.csv'
+    # path_to_users_file_windows = f'{CWD}/max_gpt4_bot/users/paid_subs.csv'
+    
+    if user_id in config.admin_ids:
+        paid_subs_list_csv, count = db.get_paid_subs_list(user_id, config.paid_ids)
+
+        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens']
+        with open(path_to_users_file_linux, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(header)
+            writer.writerows( paid_subs_list_csv)
+
+        await update.message.reply_document(open(path_to_users_file_linux, 'rb'), caption=f'👤 Всего платных подписчиков: <b>{count}</b>', parse_mode=ParseMode.HTML)
+    else:
+        await update.message.reply_text("Эта команда доступна только администраторам.")
+        return
 
 
 async def buy_callback(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    """Отправка инвойса без оплаты доставки."""
+    """Payment system. Отправка инвойса без оплаты доставки."""
     chat_id = update.message.chat_id
     title = "Оплата токенов"
     description = "🔘 Пакет 100 000 токенов"
@@ -213,7 +254,7 @@ async def buy_callback(
 
 
 async def shipping_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Answers the ShippingQuery with ShippingOptions"""
+    """Payment system. Answers the ShippingQuery with ShippingOptions"""
     query = update.shipping_query
     # check the payload, is this from your bot?
     if query.invoice_payload != "Custom-Payload":
@@ -232,7 +273,7 @@ async def shipping_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 # after (optional) shipping, it's the pre-checkout
 async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Answers the PreQecheckoutQuery"""
+    """Payment system. Answers the PreQecheckoutQuery"""
     query = update.pre_checkout_query
     # check the payload, is this from your bot?
     if query.invoice_payload != "Custom-Payload":
@@ -244,36 +285,17 @@ async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 # finally, after contacting the payment provider...
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Confirms the successful payment."""
+    """Payment system. Confirms the successful payment."""
     user_id = update.message.from_user.id
     config.paid_ids.append(user_id)
     db.set_user_attribute(user_id, 'token_limit', 100000)
 
-    await update.message.reply_text(f"Спасибо за платеж!\n\nПроверить баланс /balance")
-
-
-async def update_token_limit_every_monday_at_ten_am(update: Update, context: CallbackContext):
-    await register_user_if_not_exists(update, context, update.message.from_user)
-    user_id = update.message.from_user.id
-    # вычисляем время до ближайшего понедельника 10:00 утра
-    now = datetime.now()
-    monday = now + timedelta(days=(7 - now.weekday()))
-    monday = monday.replace(hour=10, minute=0, second=0, microsecond=0)
-    time_until_monday = (monday - now).total_seconds()
-    
-
-    # ждем до понедельника 10:00 утра
-    await asyncio.sleep(time_until_monday)
-    
-    # обновляем баланс токенов каждого пользователя на 10000 токенов
-    user_ids_list = db.update_balance_every_monday()
-    
-    text='Ваш баланс равен 10 000 токенов!\n\nБаланс пополняется каждый понедельник в 10:00 по МСК.\nКупить 100 000 токенов /buy'
-    for user_id in user_ids_list:
-        await context.bot.send_message(user_id, text)
+    await update.message.reply_text(f"Спасибо за платеж!\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')}\n\nПроверить баланс /balance")
 
 
 async def send_update_notice(update: Update, context: CallbackContext):
+    """Функция для админа. Отправляет текст после команды /send_notice_to_all всем юзерам."""
+    
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
     text="Используйте следующую конструкцию:\n\n<code>/send_notice_to_all {text}</code>"
@@ -320,7 +342,7 @@ async def start_handle(update: Update, context: CallbackContext):
     else:
         reply_text = 'В <b>приватных чатах</b> используй конструкцию <code>Нарисуй</code> для генерации изображения или любое текстовое или голосовое сообщение\n\nВ <b>группах</b> используй конструкцию <code>Макс, </code> или <code>Макс, нарисуй</code> для генерации изображения'
     
-    reply_text += f'\n\nДоступно токенов: <b>{balance}</b>\n<i>Токены обновляются каждый понедельник в 10:00 по МСК.</i>'
+    reply_text += f'\n\nДоступно токенов: <b>{balance}</b>\n<i>Токены обновляются каждый день в 10:00 по МСК.</i>'
     
     reply_text += f'\n\n{HELP_MESSAGE}'
     
@@ -810,6 +832,23 @@ async def debbug(update: Update, context: CallbackContext, n_used_tokens_last_me
     text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
 
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+
+async def update_token_limit_every_day_at_ten_am(application: Application):
+    """Функция ежедневно обновляет token_limit у каждого пользователя, баланс которых меньше 10000 токенов."""
+
+    # Выбираем всех пользователей из базы данных и пополняем их баланс на 10000 токенов
+    user_ids_list = db.update_balance_every_day()
+
+    text='Ваш баланс равен 10 000 токенов!\n\nБаланс пополняется каждый день в 10:00 по МСК.\nКупить 100 000 токенов /buy'
+    for user_id in user_ids_list:
+        await application.bot.send_message(user_id, text)
+        
+
+def get_tomorrow_10am():
+    tomorrow = datetime.now() + timedelta(days=1)
+    tomorrow_10am = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, hour=10, minute=0, second=0)
+    return tomorrow_10am
     
 
 async def post_init(application: Application):
@@ -819,6 +858,7 @@ async def post_init(application: Application):
         BotCommand("/retry", "Восстановить предыдущий диалог ◀️"),
         BotCommand("/balance", "Показать баланс 💰"),
         BotCommand("/help", "Помощь 🆘"),
+        BotCommand("/helpa", "Помощь для администраторов 🆘"),
         BotCommand("/buy", "Купить пакет токенов 💳"),
     ])
 
@@ -832,6 +872,9 @@ def run_bot() -> None:
         .post_init(post_init)
         .build()
     )
+    first = get_tomorrow_10am()
+    job_queue = application.job_queue
+    job_queue.run_repeating(update_token_limit_every_day_at_ten_am, interval=config.update_token_limit, first=first)
 
     # add handlers
     user_filter = filters.ALL
@@ -846,13 +889,10 @@ def run_bot() -> None:
     # Payment system
     # Add command handler to start the payment invoice
     application.add_handler(CommandHandler("buy", buy_callback))
-
     # Optional handler if your product requires shipping
     application.add_handler(ShippingQueryHandler(shipping_callback))
-
     # Pre-checkout handler to final check
     application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
-
     # Success! Notify your user!
     application.add_handler(
         MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback)
@@ -861,7 +901,8 @@ def run_bot() -> None:
     # admin system
     application.add_handler(CommandHandler("reset", reset_token_limit, filters=user_filter))
     application.add_handler(CommandHandler("helpa", help_handle_for_admins, filters=user_filter))
-    application.add_handler(CommandHandler("users", send_users_list_for_admin, filters=user_filter))
+    application.add_handler(CommandHandler("get_users", send_users_list_for_admin, filters=user_filter))
+    application.add_handler(CommandHandler("get_subs", send_paid_subs_list_for_admin, filters=user_filter))
     application.add_handler(CommandHandler("add", add_token_limit_by_id, filters=user_filter))
     application.add_handler(CommandHandler("send_notice_to_all", send_update_notice, filters=user_filter))
     

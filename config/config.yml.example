@@ -1,17 +1,28 @@
-telegram_token: ""
-openai_api_key: ""
+# # max_gpt4_bot
+# telegram_token: "6278286292:AAFnOIvLgXEMGDpGQOj6VB6izvz71ayoiRE"
+
+
+# TEST_BOT
+# maxima_gpt4_bot
+telegram_token: "6168009607:AAEkq7WsoavHXyYInn443QosYzaCT4agk_0"
+
+# maidaritsydenov@gmail.com
+openai_api_key: "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"
+
+# PAYMENTS
+payment_token: "381764678:TEST:53083"
 
 # config
 use_chatgpt_api: true
 admin_ids: [740525701]
 paid_ids: []
 allowed_telegram_usernames: []  # if empty, the bot is available to anyone. pass a username string to allow it and/or user ids as integers
-new_dialog_timeout: 600  # new dialog starts after timeout (in seconds)
+new_dialog_timeout: 86400  # new dialog starts after timeout (in seconds)
 enable_message_streaming: true  # if set, messages will be shown to user word-by-word
 
 
 # SaluteSpeech config (https://developers.sber.ru/studio/workspaces/)
-SBER_SALUTE_TOKEN: ""
+SBER_SALUTE_TOKEN: "Y2EwODVlMjQtYWY5Mi00MDIxLWE4YTctYjQwMTNlOGU4NTJlOjc1MmFhNDEzLTk5ZTYtNDU3NS1hNWVmLTA1N2U5YzMyMDUwNA=="
 SBER_SALUTE_SCOPE: "SALUTE_SPEECH_PERS"
 PATH_TO_SERT_LINUX: "/code/config/russiantrustedca.pem"
 PATH_TO_SERT_WINDOWS: "C:/Users/user/Downloads/russian_trusted_root_ca.cer"
