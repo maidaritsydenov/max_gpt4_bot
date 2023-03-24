@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/varfix-ai-chatbot-gpt-3.png" width="100" height="100" /></a>
+<a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/Artificial-Intelligence1-final.jpg" width="100" height="100" /></a>
 </p>
 
 <p align="center">
