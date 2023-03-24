@@ -1,3 +1,6 @@
+# Telegram Bot MaxBot (MidJourney, ChatGPT, etc.)
+### The project is under development
+
 <p align="center">
 <a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/header.jpg" width="1288" height="240" /></a>
 </p>
@@ -5,9 +8,6 @@
 <p align="center">
 <a href="https://t.me/max_gpt4_bot" alt="Run Telegram Bot shield"><img src="https://img.shields.io/badge/RUN-Telegram%20Bot-blue" /></a>
 </p>
-
-# Telegram Bot MaxBot (MidJourney, ChatGPT, etc.)
-### The project is under development
 
 Telegram bot [@max_gpt4_bot](https://t.me/max_gpt4_bot)
 Telegram test bot [@maxima_gpt4_bot](https://t.me/maxima_gpt4_bot)
