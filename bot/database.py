@@ -150,7 +150,8 @@ class Database:
     def send_update_notice(self):
         user_ids_list = []
         for user in self.user_collection.find():
-            user_ids_list.append(int(user['_id']))
+            if user["username"] != config.bot_username:
+                user_ids_list.append(int(user['_id']))
         return user_ids_list
     
     
@@ -161,8 +162,9 @@ class Database:
         
         for user in self.user_collection.find():
             user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
-            user_list_csv.append(user_attr)
-            count += 1
+            if user["username"] != config.bot_username:
+                user_list_csv.append(user_attr)
+                count += 1
         return user_list_csv, count - 1
     
     

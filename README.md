@@ -28,12 +28,9 @@
 
 
 ## Commands:
-- /retry – Восстановить последний диалог ◀️
-- /new – Начать новый диалог 🆕
-- /mode – Выбрать роль 🎭
 - /balance – Показать баланс 💰
-- /help – Помощь 🆘
-- /pay – Купить пакет токенов 💳
+- /profile - Личный кабинет с инлайн-кнопками 🗄
+- /pay – Купить 100 000 токенов 💳
 
 
 ## Commands for admins:
@@ -42,6 +39,7 @@
 - /get_users – Получить csv-файл со списком юзеров
 - /get_subs – Получить csv-файл со списком платных подписчиков
 - /send_notice_to_all text - Отправить text всем юзерам
+- /delete user_id - Удалить юзера из БД
 
 <p align="center">
 <a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/maxima_gpt4_bot.gif" width="239" height="480" /></a>
@@ -108,6 +106,11 @@ config.yml:
 - telegram_token: ""
 - openai_api_key: ""
 - SBER_SALUTE_TOKEN: ""
+- admin_ids: []
+- paid_ids: []
+- payment_token: ""
+- bot_username: ""
+
 
 * Выполнить сборку и запуск контейнеров
 ```
@@ -126,13 +129,13 @@ sudo docker compose up -d --build
 <h4>Contact me:</h4>
 
 <a href='https://t.me/maidaritsydenov'><img src="https://github.com/maidaritsydenov/maidaritsydenov/blob/main/logo/telegram.svg" width="32" 
-   height="32" alt="Пример"></a>
+   height="32" alt="Telegram"></a>
 <a href='https://www.linkedin.com/in/maidari-tsydenov-315b89264/'><img src="https://github.com/maidaritsydenov/maidaritsydenov/blob/main/logo/linkedin.svg" width="32" 
-   height="32" alt="Пример"></a>
+   height="32" alt="Linkedin"></a>
 <a href='https://www.instagram.com/maidaritsydenov/'><img src="https://github.com/maidaritsydenov/maidaritsydenov/blob/main/logo/instagram.svg" width="32" 
-   height="32" alt="Пример"></a>
+   height="32" alt="Instagram"></a>
 <a href='https://career.habr.com/maidaritsydenov'><img src="https://github.com/maidaritsydenov/maidaritsydenov/blob/main/logo/habr.svg" width="32" 
-   height="32" alt="Пример"></a>
+   height="32" alt="Habr"></a>
 
 
 

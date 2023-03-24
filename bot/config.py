@@ -15,6 +15,7 @@ config_env = dotenv.dotenv_values(config_dir / "config.env")
 telegram_token = config_yaml["telegram_token"]
 openai_api_key = config_yaml["openai_api_key"]
 payment_token = config_yaml["payment_token"]
+bot_username = config_yaml["bot_username"]
 
 SBER_SALUTE_TOKEN = config_yaml['SBER_SALUTE_TOKEN']
 SBER_SALUTE_SCOPE = config_yaml['SBER_SALUTE_SCOPE']

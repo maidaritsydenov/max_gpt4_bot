@@ -76,24 +76,26 @@ HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
 
 ABILITY_MESSAGE = """🔥 <b>Давай расскажу чем я могу тебе помочь?</b>
 
-1️⃣ Создать резюме. С моей помощью ты можешь устроиться на работу мечты, ведь я могу написать хорошее резюме
+<i>1️⃣ Создать резюме. С моей помощью ты можешь устроиться на работу мечты, ведь я могу написать хорошее резюме
 2️⃣ Написать текст на любую тему. Это поможет тебе в работе и учебе
 3️⃣ Перевести текст с иностранного языка
 4️⃣ Ответить на интересующие тебя вопросы. Чаще всего у меня получается это лучше, чем у известных поисковиков
 5️⃣ Написать код, перевести его с одного языка на другой и найти ошибки
-6️⃣ Планировать и осуществлять расчеты. Например, ты можешь за считанные секунды получить готовый план питания для похудения
+6️⃣ Планировать и осуществлять расчеты. Например, ты можешь за считанные секунды получить готовый план питания для похудения</i>
 
 🔉 <b>Я могу понимать твои голосовые сообщения и отвечать на них!</b>
 
-🗣 <b>Все это я могу рассказать тебе голосом</b>
-Для этого используй конструкцию <code>Расскажи</code> в личных сообщениях или <code>Макс, расскажи</code> в группах
+🗣 <b>Все это я могу рассказать тебе голосом</b> Для этого используй конструкцию
+<code>"Расскажи"</code> в личных сообщениях или
+<code>"Макс", расскажи</code> в группах
 
-🖼 <b>А еще я могу нарисовать изображение по твоему описанию</b>
-Для этого используй конструкцию <code>Нарисуй</code> в личных сообщениях или <code>Макс, нарисуй</code> в группах
+🖼 <b>А еще я могу нарисовать изображение по твоему описанию</b> Для этого используй конструкцию
+<code>"Нарисуй"</code> в личных сообщениях или
+<code>"Макс, нарисуй"</code> в группах
 
 💡Это лишь малая часть моего функционала. Задавай мне любые задачи, а я постараюсь тебе помочь.
 
-👇🏻Жми кнопку «Начать чат» 👇🏻
+👇🏻Жми кнопку <b>«Начать чат»</b> 👇🏻
 """
 
 
@@ -105,7 +107,8 @@ def split_text_into_chunks(text, chunk_size):
 
 
 async def register_user_if_not_exists(update: Update, context: CallbackContext, user: User):
-    if not db.check_if_user_exists(user.id) and not update.message.from_user.is_bot:
+    # if not db.check_if_user_exists(user.id) and not update.message.from_user.is_bot:
+    if not db.check_if_user_exists(user.id):
         db.add_new_user(
             user.id,
             update.message.chat_id,
@@ -335,10 +338,9 @@ async def send_update_notice(update: Update, context: CallbackContext):
                 return
             else:
                 text = ' '.join(map(str, context.args))
-                user_ids_list = db.send_update_notice()
-                
-                for user_id in user_ids_list:
-                    await context.bot.send_message(user_id, text, parse_mode=ParseMode.HTML)
+                user_ids_list = db.send_update_notice()                
+                for user in user_ids_list:
+                    await context.bot.send_message(user, text, parse_mode=ParseMode.HTML)
 
         except ValueError:
             text="Используйте следующую конструкцию:\n\n<code>/send_notice_to_all {text}</code>. Добавить функцию загрузки фото, видео или гиф"
@@ -749,7 +751,7 @@ async def voice_message_handle(update: Update, context: CallbackContext):
 
     chat_id = str(update.effective_chat.id)
     if (GROUP_ATTR in chat_id):
-        text = 'Распознавание голосовых сообщений не работает в группе\nПерейдите в бота чтобы воспользоваться данным функционалом\n\n@max_gpt4_bot'
+        text = f'Распознавание голосовых сообщений не работает в группе\nПерейдите в бота чтобы воспользоваться данным функционалом\n\n@{config.bot_username}'
         await context.bot.send_message(update.effective_chat.id, text, parse_mode=ParseMode.HTML)
     else:
         await register_user_if_not_exists(update, context, update.message.from_user)
@@ -831,8 +833,27 @@ async def ability_message(update: Update, context: CallbackContext):
 
     keyboard = [[InlineKeyboardButton("Начать чат", callback_data="Начать диалог")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    path_to_gif_file_linux = f'{CWD}/static'
 
     await update.message.reply_text(ABILITY_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    
+    # links_to_gif = ['https://ibb.co/BBxdVGJ', 'https://ibb.co/QmrzQJW', 'https://ibb.co/DQHNycC', 'https://ibb.co/N7gptjf']
+    # await update.message.reply_media_group(media=links_to_gif, disable_notification=True)
+
+    # try:
+    #     for i in links_to_gif:
+    #         await update.message.reply_animation(animation=i, disable_notification=True)
+    
+    # except Exception as e:
+    #     error_text = f"ability_message. Что-то пошло не так. Ошибка: {e}"
+    #     logger.error(error_text)
+    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/admin_panel.gif', 'rb'), disable_notification=True)
+    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/image_generation.gif', 'rb'), disable_notification=True)
+    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/synthesis.gif', 'rb'), disable_notification=True)
+    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/voice_generation.gif', 'rb'), disable_notification=True)
+    #     await update.message.reply_document(document=open(f'{path_to_gif_file_linux}/voice_generation.gif', 'rb'), disable_notification=True)
+    
+
 
 
 async def set_chat_mode_handle(update: Update, context: CallbackContext):
