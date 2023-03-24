@@ -152,6 +152,31 @@ class Database:
         for user in self.user_collection.find():
             user_ids_list.append(int(user['_id']))
         return user_ids_list
+    
+    
+    def get_users_list(self, user_id: int):
+        self.check_if_user_exists(user_id, raise_exception=True)
+        user_list_csv = []
+        count = 1
+        
+        for user in self.user_collection.find():
+            user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
+            user_list_csv.append(user_attr)
+            count += 1
+        return user_list_csv, count - 1
+    
+    
+    
+    def delete_user(self, user_id: int):
+        try:
+            self.check_if_user_exists(user_id, raise_exception=True)
+            user = self.user_collection.delete_one({"_id": user_id})
+            username = self.get_user_attribute(user_id, "username")
+            text = f"Пользователь с id: {user_id} username: {username} успешно удален из базы данных."
+            return text
+        except Exception as e:
+            text = f"Пользователь с таким user_id не найден в базе данных. Ошибка {e}"
+            return text
             
             
             
