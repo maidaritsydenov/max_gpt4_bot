@@ -319,9 +319,9 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
     """Payment system. Confirms the successful payment."""
     user_id = update.message.from_user.id
     config.paid_ids.append(user_id)
-    db.set_user_attribute(user_id, 'token_limit', config.token_limit)
+    db.set_user_attribute(user_id, 'token_limit', config.token_limit_for_paid_subs)
 
-    await update.message.reply_text(f"Спасибо за платеж!\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')}\n\nПроверить баланс можно в личном кабинете /profile")
+    await update.message.reply_text(f"Спасибо за платеж!\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')} токенов!\n\nПроверить баланс можно в личном кабинете /profile")
 
 
 async def send_update_notice(update: Update, context: CallbackContext):
@@ -367,7 +367,7 @@ async def start_handle(update: Update, context: CallbackContext):
     db.start_new_dialog(user_id)
     balance = db.get_user_attribute(user_id, "token_limit")
     
-    reply_text = "Привет! Я <b>Макс,</b> бот реализованный с помщью GPT-3.5 OpenAI API 🤖\n\n"    
+    reply_text = "Привет! Я <b>Макс,</b> бот реализованный с помощью GPT-3.5 OpenAI API 🤖\n\n"    
     
     # Проверка на сообщение из группы или из приватных чатов
     chat_id = str(update.effective_chat.id)
@@ -414,7 +414,7 @@ async def profile_handle(update: Update, context: CallbackContext):
     name = db.get_user_attribute(user_id, "first_name")
     balance = db.get_user_attribute(user_id, "token_limit")
         
-    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance}\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК</i>"
+    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance} токенов\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК</i>"
     
     await register_user_if_not_exists(update, context, update.message.from_user)
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
@@ -831,29 +831,18 @@ async def ability_message(update: Update, context: CallbackContext):
 
     user_id = update.message.from_user.id
 
+    links_to_photo = [
+        telegram.InputMediaPhoto('https://i.postimg.cc/FFS7ZcGf/1.jpg'),
+        telegram.InputMediaPhoto('https://i.postimg.cc/760wg1Dw/2.jpg'),
+        telegram.InputMediaPhoto('https://i.postimg.cc/hPpgbtFz/3.jpg'),
+        ]
+
     keyboard = [[InlineKeyboardButton("Начать чат", callback_data="Начать диалог")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    path_to_gif_file_linux = f'{CWD}/static'
+    # path_to_photo_file_linux = f'{CWD}/static'
 
     await update.message.reply_text(ABILITY_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
-    
-    # links_to_gif = ['https://ibb.co/BBxdVGJ', 'https://ibb.co/QmrzQJW', 'https://ibb.co/DQHNycC', 'https://ibb.co/N7gptjf']
-    # await update.message.reply_media_group(media=links_to_gif, disable_notification=True)
-
-    # try:
-    #     for i in links_to_gif:
-    #         await update.message.reply_animation(animation=i, disable_notification=True)
-    
-    # except Exception as e:
-    #     error_text = f"ability_message. Что-то пошло не так. Ошибка: {e}"
-    #     logger.error(error_text)
-    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/admin_panel.gif', 'rb'), disable_notification=True)
-    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/image_generation.gif', 'rb'), disable_notification=True)
-    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/synthesis.gif', 'rb'), disable_notification=True)
-    #     await update.message.reply_animation(animation=open(f'{path_to_gif_file_linux}/voice_generation.gif', 'rb'), disable_notification=True)
-    #     await update.message.reply_document(document=open(f'{path_to_gif_file_linux}/voice_generation.gif', 'rb'), disable_notification=True)
-    
-
+    await update.message.reply_media_group(media=links_to_photo, disable_notification=True)
 
 
 async def set_chat_mode_handle(update: Update, context: CallbackContext):
@@ -987,7 +976,7 @@ async def update_token_limit_every_day_at_ten_am(application: Application):
     # Выбираем всех пользователей из базы данных и пополняем их баланс на 10000 токенов
     user_ids_list = db.update_balance_every_day()
 
-    text=f'Ваш баланс равен {config.token_limit} токенов!\n\nБаланс пополняется каждый день в 10:00 по МСК.\nКупить 100 000 токенов /buy'
+    text=f'Ваш баланс равен {config.token_limit_for_users} токенов!\n\nБаланс пополняется каждый день в 10:00 по МСК.\nКупить 100 000 токенов /buy'
     for user_id in user_ids_list:
         await application.bot.send_message(user_id, text)
         

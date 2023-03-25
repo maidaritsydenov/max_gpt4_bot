@@ -1,10 +1,5 @@
 # # max_gpt4_bot
-# telegram_token: "6278286292:AAFnOIvLgXEMGDpGQOj6VB6izvz71ayoiRE"
-
-
-# TEST_BOT
-# maxima_gpt4_bot
-telegram_token: "6168009607:AAEkq7WsoavHXyYInn443QosYzaCT4agk_0"
+telegram_token: "6278286292:AAFnOIvLgXEMGDpGQOj6VB6izvz71ayoiRE"
 
 # maidaritsydenov@gmail.com
 openai_api_key: "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"
@@ -12,13 +7,19 @@ openai_api_key: "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"
 # PAYMENTS
 payment_token: "381764678:TEST:53083"
 
-# config
-use_chatgpt_api: true
 admin_ids: [740525701]
 paid_ids: []
+
+bot_username: 'max_gpt4_bot'
+
+# config
+use_chatgpt_api: true
 allowed_telegram_usernames: []  # if empty, the bot is available to anyone. pass a username string to allow it and/or user ids as integers
-new_dialog_timeout: 86400  # new dialog starts after timeout (in seconds)
+new_dialog_timeout: 14400  # new dialog starts after timeout (in seconds)
 enable_message_streaming: true  # if set, messages will be shown to user word-by-word
+token_limit_for_users: 10000
+token_limit_for_paid_subs: 100000
+update_token_limit: 86400
 
 
 # SaluteSpeech config (https://developers.sber.ru/studio/workspaces/)

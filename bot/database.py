@@ -142,8 +142,8 @@ class Database:
         user_ids_list = []
         for user in self.user_collection.find():
             user_id = user['_id']
-            if self.get_user_attribute(user_id, 'token_limit') < 10000:
-                self.set_user_attribute(user_id, 'token_limit', 10000)
+            if self.get_user_attribute(user_id, 'token_limit') < config.token_limit_for_users:
+                self.set_user_attribute(user_id, 'token_limit', config.token_limit_for_users)
                 user_ids_list.append(user_id)
         return user_ids_list
     
