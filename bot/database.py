@@ -51,7 +51,7 @@ class Database:
             "s_date": int(str(datetime.now())[8:10:]),
             "usd_rate": 75.0,
             
-            "token_limit": 5000
+            "token_limit": 10000
         }
 
         if not self.check_if_user_exists(user_id):
