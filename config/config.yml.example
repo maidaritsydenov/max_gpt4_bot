@@ -1,16 +1,11 @@
-# # max_gpt4_bot
-telegram_token: "6278286292:AAFnOIvLgXEMGDpGQOj6VB6izvz71ayoiRE"
+telegram_token: ""
+openai_api_key: ""
+payment_token: ""
 
-# maidaritsydenov@gmail.com
-openai_api_key: "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"
-
-# PAYMENTS
-payment_token: "381764678:TEST:53182"
-
-admin_ids: [740525701]
+admin_ids: []
 paid_ids: []
 
-bot_username: 'max_gpt4_bot'
+bot_username: ""
 
 # config
 use_chatgpt_api: true

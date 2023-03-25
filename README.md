@@ -123,9 +123,6 @@ sudo docker compose up -d --build
 * [sbercloud.ru/ru/aicloud/salutespeech](https://developers.sber.ru/docs/ru/salutespeech/category-overview)
 
 
-### Authors:
-1. Maidari Tsydenov
-
 <h4>Contact me:</h4>
 
 <a href='https://t.me/maidaritsydenov'><img src="https://github.com/maidaritsydenov/maidaritsydenov/blob/main/logo/telegram.svg" width="32" 
