@@ -1,6 +1,7 @@
 telegram_token: ""
 openai_api_key: ""
 payment_token: ""
+SBER_SALUTE_TOKEN: ""
 
 admin_ids: []
 paid_ids: []
@@ -18,10 +19,8 @@ update_token_limit: 86400
 
 
 # SaluteSpeech config (https://developers.sber.ru/studio/workspaces/)
-SBER_SALUTE_TOKEN: "Y2EwODVlMjQtYWY5Mi00MDIxLWE4YTctYjQwMTNlOGU4NTJlOjc1MmFhNDEzLTk5ZTYtNDU3NS1hNWVmLTA1N2U5YzMyMDUwNA=="
 SBER_SALUTE_SCOPE: "SALUTE_SPEECH_PERS"
 PATH_TO_SERT_LINUX: "/code/config/russiantrustedca.pem"
-PATH_TO_SERT_WINDOWS: "C:/Users/user/Downloads/russian_trusted_root_ca.cer"
 
 
 # prices
