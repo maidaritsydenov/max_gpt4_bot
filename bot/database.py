@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 
 import config
+from get_current_usd import usd_rate_check
 
 
 class Database:
@@ -32,6 +33,12 @@ class Database:
         first_name: str = "",
         last_name: str = "",
     ):
+        old_answer = [int(str(datetime.now())[8:10:]), 75.0]
+        new_answer = usd_rate_check(old_answer)
+        
+        s_date = new_answer[0]
+        usd_rate = new_answer[1]
+
         user_dict = {
             "_id": user_id,
             "chat_id": chat_id,
@@ -48,8 +55,8 @@ class Database:
 
             "n_used_tokens": 0,
 
-            "s_date": int(str(datetime.now())[8:10:]),
-            "usd_rate": 75.0,
+            "s_date": s_date,
+            "usd_rate": usd_rate,
             
             "token_limit": 10000
         }
@@ -172,9 +179,9 @@ class Database:
     def delete_user(self, user_id: int):
         try:
             self.check_if_user_exists(user_id, raise_exception=True)
-            user = self.user_collection.delete_one({"_id": user_id})
             username = self.get_user_attribute(user_id, "username")
             text = f"Пользователь с id: {user_id} username: {username} успешно удален из базы данных."
+            user = self.user_collection.delete_one({"_id": user_id})
             return text
         except Exception as e:
             text = f"Пользователь с таким user_id не найден в базе данных. Ошибка {e}"

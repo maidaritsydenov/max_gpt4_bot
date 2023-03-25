@@ -138,7 +138,7 @@ async def check_token_limit(update: Update, context: CallbackContext):
     balance = db.get_user_attribute(user_id, 'token_limit')
 
     if balance <= ZERO and user_id not in config.admin_ids:
-        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на этой неделе.\n\nВы можете подождать ежедневного обновления токенов или купить пакет <b>100 000 токенов</b> за 399 рублей."
+        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на сегодня.\n\nВы можете подождать ежедневного обновления токенов или купить пакет <b>100 000 токенов</b> за 399 рублей."
         await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         db.set_user_attribute(user_id, 'token_limit', ZERO)
         return False
@@ -150,7 +150,7 @@ async def reset_token_limit(update: Update, context: CallbackContext):
 
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
-    text="Используйте следующую конструкцию:\n\n<code>/reset {user_id}</code>"
+    text="Используйте следующую конструкцию:\n\n/reset {user_id}"
     
     if user_id in config.admin_ids:
         try:
@@ -161,7 +161,7 @@ async def reset_token_limit(update: Update, context: CallbackContext):
                 int(context.args[0])
 
         except ValueError:
-            text="Используйте следующую конструкцию:\n\n<code>/reset {user_id}</code>\n<code>{user_id}</code> должен быть числом."
+            text="Используйте следующую конструкцию:\n\n/reset {user_id}\n<code>{user_id}</code> должен быть числом."
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
             return
         
@@ -185,7 +185,7 @@ async def add_token_limit_by_id(update: Update, context: CallbackContext):
 
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
-    text="Используйте следующую конструкцию:\n\n<code>/add {user_id} {amount}</code>"
+    text="Используйте следующую конструкцию:\n\n/add {user_id} {amount}"
     
     if user_id in config.admin_ids:
         try:
@@ -197,7 +197,7 @@ async def add_token_limit_by_id(update: Update, context: CallbackContext):
                 int(context.args[1])
 
         except ValueError:
-            text="Используйте следующую конструкцию:\n\n<code>/add {user_id} {amount}</code>\n<code>{user_id}</code> и <code>{amount}</code> должны быть числами и идти через пробел."
+            text="Используйте следующую конструкцию:\n\n/add {user_id} {amount}\n<code>{user_id}</code> и <code>{amount}</code> должны быть числами и идти через пробел."
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
             return
         
@@ -329,7 +329,7 @@ async def send_update_notice(update: Update, context: CallbackContext):
     
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
-    text="Используйте следующую конструкцию:\n\n<code>/send_notice_to_all {text}</code>"
+    text="Используйте следующую конструкцию:\n\n/send_notice_to_all {text}"
     
     if user_id in config.admin_ids:
         try:
@@ -343,7 +343,7 @@ async def send_update_notice(update: Update, context: CallbackContext):
                     await context.bot.send_message(user, text, parse_mode=ParseMode.HTML)
 
         except ValueError:
-            text="Используйте следующую конструкцию:\n\n<code>/send_notice_to_all {text}</code>. Добавить функцию загрузки фото, видео или гиф"
+            text="Используйте следующую конструкцию:\n\n/send_notice_to_all {text}\nДобавить функцию загрузки фото, видео или гиф"
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
             return
     else:            
@@ -454,7 +454,7 @@ async def delete_user(update: Update, context: CallbackContext):
     """Функция для админа. Удаляет юзера/бота из БД (Если в юзерлист попал бот)."""
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
-    text="Используйте следующую конструкцию:\n\n<code>/delete {user_or_bot_id}</code>"
+    text="Используйте следующую конструкцию:\n\n/delete {user_or_bot_id}"
     
     if user_id in config.admin_ids:
         try:
@@ -466,7 +466,7 @@ async def delete_user(update: Update, context: CallbackContext):
                 text = db.delete_user(int(context.args[0]))
                 await context.bot.send_message(user_id, text, parse_mode=ParseMode.HTML)
         except ValueError:
-            text="Используйте следующую конструкцию:\n\n<code>/delete {user_or_bot_id}</code>. Удалить функцию"
+            text="Используйте следующую конструкцию:\n\n/delete {user_or_bot_id}. Удалить функцию"
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
             return
     else:            
@@ -487,6 +487,7 @@ async def help_handle_for_admins(update: Update, context: CallbackContext):
 
 async def retry_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
+    if not await check_token_limit(update, context): return
     if await is_previous_message_not_answered_yet(update, context): return
     
     user_id = update.message.from_user.id
@@ -798,6 +799,7 @@ async def voice_message_handle(update: Update, context: CallbackContext):
 
 async def new_dialog_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
+    if not await check_token_limit(update, context): return
     if await is_previous_message_not_answered_yet(update, context): return
 
     user_id = update.message.from_user.id
