@@ -300,7 +300,7 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, name:
 
     user_id = update.callback_query.from_user.id
     title = f"🛒 Корзина: {name}"
-    description = '- Токены не сгорают\n- Купленные пакеты токенов суммируются'
+    description = 'Токены не сгорают. Купленные пакеты токенов суммируются.'
     # select a payload just for you to recognize its the donation from your bot
     payload = "Custom-Payload"
     # In order to get a provider_token see https://core.telegram.org/bots/payments#getting-a-token
@@ -367,8 +367,8 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
     db.set_user_attribute(user_id, 'token_limit', prices_dict[total_amount] + db.get_user_attribute(user_id, 'token_limit'))
     db.set_user_attribute(user_id, 'is_paid_sub', True)
 
-    await update.message.reply_text(f"Спасибо за платеж!\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')} токенов!\n\nПроверить баланс можно в личном кабинете /profile")
-
+    await update.message.reply_text(f"Спасибо за платеж❤️\n\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')} токенов!\nПроверить баланс можно в личном кабинете /profile")
+    
 
 async def send_update_notice(update: Update, context: CallbackContext):
     """Функция для админа. Отправляет текст после команды /send_message всем юзерам."""
