@@ -229,7 +229,7 @@ async def send_users_list_for_admin(update: Update, context: CallbackContext):
     if user_id in config.admin_ids:
         user_list_csv, count = db.get_users_list(user_id)
 
-        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Is_admin', 'Is_paid_sub']
+        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Balance', 'Is_admin', 'Is_paid_sub']
         with open(path_to_users_file_linux, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(header)
@@ -253,7 +253,7 @@ async def send_paid_subs_list_for_admin(update: Update, context: CallbackContext
     if user_id in config.admin_ids:
         paid_subs_list_csv, count = db.get_paid_subs_list(user_id)
 
-        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Is_admin', "Is_paid_sub"]
+        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Balance', 'Is_admin', 'Is_paid_sub']
         with open(path_to_users_file_linux, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(header)
