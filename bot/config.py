@@ -20,11 +20,10 @@ bot_username = config_yaml["bot_username"]
 SBER_SALUTE_TOKEN = config_yaml['SBER_SALUTE_TOKEN']
 SBER_SALUTE_SCOPE = config_yaml['SBER_SALUTE_SCOPE']
 PATH_TO_SERT_LINUX = config_yaml['PATH_TO_SERT_LINUX']
-PATH_TO_SERT_WINDOWS = config_yaml['PATH_TO_SERT_WINDOWS']
+# PATH_TO_SERT_WINDOWS = config_yaml['PATH_TO_SERT_WINDOWS']
 
 use_chatgpt_api = config_yaml.get("use_chatgpt_api", True)
 admin_ids = config_yaml['admin_ids']
-paid_ids = config_yaml['paid_ids']
 allowed_telegram_usernames = config_yaml["allowed_telegram_usernames"]
 new_dialog_timeout = config_yaml["new_dialog_timeout"]
 token_limit_for_users = config_yaml["token_limit_for_users"]
@@ -36,6 +35,10 @@ mongodb_uri = f"mongodb://mongo:{config_env['MONGODB_PORT']}"
 # chat_modes
 with open(config_dir / "chat_modes.yml", 'r') as f:
     chat_modes = yaml.safe_load(f)
+
+# prices_package  
+with open(config_dir / "prices.yml", 'r') as f:
+    prices_package = yaml.safe_load(f)
 
 # prices
 chatgpt_price_per_1000_tokens = config_yaml.get("chatgpt_price_per_1000_tokens", 0.002)

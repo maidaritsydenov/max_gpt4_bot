@@ -35,7 +35,7 @@
 - /add user_id amount – Пополнить лимит токенов у юзера
 - /get_users – Получить csv-файл со списком юзеров
 - /get_subs – Получить csv-файл со списком платных подписчиков
-- /send_notice_to_all text - Отправить text всем юзерам
+- /send_message text - Отправить text всем юзерам
 - /delete user_id - Удалить юзера из БД
 
 <p align="center">

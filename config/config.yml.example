@@ -4,7 +4,6 @@ payment_token: ""
 SBER_SALUTE_TOKEN: ""
 
 admin_ids: []
-paid_ids: []
 
 bot_username: ""
 

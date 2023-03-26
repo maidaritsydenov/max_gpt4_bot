@@ -61,7 +61,7 @@ HELP_MESSAGE = """
 - 1 токен ~ 4 символа на английском</i>
 
 ✴️ <b>Что делать, если закончились бесплатные токены?</b>
-- <i>Дождитесь пополнения бесплатных токенов, которое происходит ежедневно в 10:00 по МСК, или купите пакет 100 000 токенов /buy. Узнать остаток токенов можно в личном кабинете /profile.</i>
+- <i>Дождитесь пополнения бесплатных токенов, которое происходит ежедневно в 10:00 по МСК, или купите дополнительный пакет токенов. Узнать остаток токенов можно в личном кабинете /profile.</i>
 """
 
 HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
@@ -69,7 +69,7 @@ HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
 ⚪ /add user_id amount – Пополнить лимит токенов у юзера
 ⚪ /get_users – Получить csv-файл со списком юзеров
 ⚪ /get_subs – Получить csv-файл со списком платных подписчиков
-⚪ /send_notice_to_all text - Отправить text всем юзерам
+⚪ /send_message text - Отправить text всем юзерам
 ⚪ /delete user_id - Удалить юзера из БД
 
 """
@@ -129,7 +129,7 @@ async def check_token_limit(update: Update, context: CallbackContext):
     """Функция проверяет token_limits перед каждым запросом пользователя,
     Если пользователь превысил лимит - False (бот не реагирует на запросы)."""
     keyboard = [
-        [InlineKeyboardButton("💰 Купить", callback_data="Купить 100 000 токенов")]
+        [InlineKeyboardButton("💰 Купить", callback_data="buy_package")]
         ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -138,7 +138,7 @@ async def check_token_limit(update: Update, context: CallbackContext):
     balance = db.get_user_attribute(user_id, 'token_limit')
 
     if balance <= ZERO and user_id not in config.admin_ids:
-        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на сегодня.\n\nВы можете подождать ежедневного обновления токенов или купить пакет <b>100 000 токенов</b> за 399 рублей."
+        text = "🥲 К сожалению, Вы исчерпали весь лимит токенов на сегодня.\n\nВы можете подождать ежедневного обновления токенов или купить пакет токенов."
         await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         db.set_user_attribute(user_id, 'token_limit', ZERO)
         return False
@@ -209,6 +209,8 @@ async def add_token_limit_by_id(update: Update, context: CallbackContext):
             db.set_user_attribute(int(context.args[0]), 'token_limit', db.get_user_attribute(int(context.args[0]), 'token_limit') + int(context.args[1]))
             text=f"Баланс пользователя с user_id: <code>{int(context.args[0])}</code> пополнен на {int(context.args[1])} токенов!"
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            text=f"Ваш баланс пополнен на {int(context.args[1])} токенов!\nПроверить баланс можно в профиле /profile"
+            await context.bot.send_message(int(context.args[0]), text, parse_mode=ParseMode.HTML)
     else:            
         await update.message.reply_text("Эта команда доступна только администраторам.")
         return
@@ -220,13 +222,14 @@ async def send_users_list_for_admin(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
 
-    path_to_users_file_linux = f'{CWD}/users/users.csv'
+    date = (str(datetime.now())[:10:])
+    path_to_users_file_linux = f'{CWD}/users/users_{date}.csv'
     # path_to_users_file_windows = f'{CWD}/max_gpt4_bot/users/users.csv'
     
     if user_id in config.admin_ids:
         user_list_csv, count = db.get_users_list(user_id)
 
-        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens']
+        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Is_admin', 'Is_paid_sub']
         with open(path_to_users_file_linux, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(header)
@@ -242,14 +245,15 @@ async def send_paid_subs_list_for_admin(update: Update, context: CallbackContext
     """Функция для админа. Отправляет файл со списком платных подписчиков."""
     
     user_id = update.message.from_user.id
-
-    path_to_users_file_linux = f'{CWD}/users/paid_subs.csv'
+    
+    date = (str(datetime.now())[:10:])
+    path_to_users_file_linux = f'{CWD}/users/paid_subs_{date}.csv'
     # path_to_users_file_windows = f'{CWD}/max_gpt4_bot/users/paid_subs.csv'
     
     if user_id in config.admin_ids:
-        paid_subs_list_csv, count = db.get_paid_subs_list(user_id, config.paid_ids)
+        paid_subs_list_csv, count = db.get_paid_subs_list(user_id)
 
-        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens']
+        header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Is_admin', "Is_paid_sub"]
         with open(path_to_users_file_linux, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(header)
@@ -261,27 +265,61 @@ async def send_paid_subs_list_for_admin(update: Update, context: CallbackContext
         return
 
 
-async def buy_callback(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def send_prices(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    if await is_previous_message_not_answered_yet(update, context): return
+
+    user_id = update.message.from_user.id
+    db.set_user_attribute(user_id, "last_interaction", datetime.now())
+
+    keyboard = []
+    for package, package_dict in config.prices_package.items():
+        keyboard.append([InlineKeyboardButton(package_dict["name"], callback_data=f"set_package|{package}")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text("Выберите пакет токенов:\n\n<b>Платежная система:</b> ЮMoney", reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+    
+
+async def send_buy_callback_handle(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
+    user_id = update.callback_query.from_user.id
+
+    query = update.callback_query
+    await query.answer()
+
+    price_package = query.data.split('|')[1]
+    
+    name = config.prices_package[price_package]['name']
+    price = config.prices_package[price_package]['price']
+        
+    await buy_callback(update, context, name, price)
+
+
+async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, name: str, price: int) -> None:
     """Payment system. Отправка инвойса без оплаты доставки."""
-    chat_id = update.message.chat_id
-    title = "🛒 Корзина"
-    description = "Пакет токенов: 100 000"
+
+    user_id = update.callback_query.from_user.id
+    title = f"🛒 Корзина: {name}"
+    description = '- Токены не сгорают\n- Купленные пакеты токенов суммируются'
     # select a payload just for you to recognize its the donation from your bot
     payload = "Custom-Payload"
     # In order to get a provider_token see https://core.telegram.org/bots/payments#getting-a-token
     currency = "RUB"
     # price in dollars
-    price = 399
+    price = price
     # price * 100 so as to include 2 decimal points
-    prices = [LabeledPrice("Токены: 100 000", price * 100)]
+    prices = [LabeledPrice(f"{name}", price * 100)]
 
     # optionally pass need_name=True, need_phone_number=True,
     # need_email=True, need_shipping_address=True, is_flexible=True
-    await context.bot.send_invoice(
-        chat_id, title, description, payload, config.payment_token, currency, prices
-    )
+    try:
+        await context.bot.send_invoice(
+            user_id, title, description, payload, config.payment_token, currency, prices
+        )
+    except Exception as e:
+            text=f"Что-то пошло не так: {e}"
+            await context.bot.send_message(user_id, text, parse_mode=ParseMode.HTML)
+            return
 
 
 async def shipping_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -317,19 +355,27 @@ async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 # finally, after contacting the payment provider...
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Payment system. Confirms the successful payment."""
+    prices_dict = {
+        69: 10000,
+        199: 50000,
+        399: 100000
+    } # TODO - Переписать функцию. Учесть комиссию
+    
     user_id = update.message.from_user.id
-    config.paid_ids.append(user_id)
-    db.set_user_attribute(user_id, 'token_limit', config.token_limit_for_paid_subs)
+    total_amount = int(update.message.successful_payment.total_amount)/100
+
+    db.set_user_attribute(user_id, 'token_limit', prices_dict[total_amount] + db.get_user_attribute(user_id, 'token_limit'))
+    db.set_user_attribute(user_id, 'is_paid_sub', True)
 
     await update.message.reply_text(f"Спасибо за платеж!\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')} токенов!\n\nПроверить баланс можно в личном кабинете /profile")
 
 
 async def send_update_notice(update: Update, context: CallbackContext):
-    """Функция для админа. Отправляет текст после команды /send_notice_to_all всем юзерам."""
+    """Функция для админа. Отправляет текст после команды /send_message всем юзерам."""
     
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
-    text="Используйте следующую конструкцию:\n\n/send_notice_to_all {text}"
+    text="Используйте следующую конструкцию:\n\n/send_message {text}"
     
     if user_id in config.admin_ids:
         try:
@@ -343,7 +389,7 @@ async def send_update_notice(update: Update, context: CallbackContext):
                     await context.bot.send_message(user, text, parse_mode=ParseMode.HTML)
 
         except ValueError:
-            text="Используйте следующую конструкцию:\n\n/send_notice_to_all {text}\nДобавить функцию загрузки фото, видео или гиф"
+            text="Используйте следующую конструкцию:\n\n/send_message {text}\nДобавить функцию загрузки фото, видео или гиф"
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
             return
     else:            
@@ -357,11 +403,14 @@ async def start_handle(update: Update, context: CallbackContext):
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
         [InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
         [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог")],
-        [InlineKeyboardButton("💰 Купить 100 000 токенов", callback_data="Купить 100 000 токенов")]
+        [InlineKeyboardButton("💰 Купить пакет токенов", callback_data="buy_package")]
         ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     user_id = update.message.from_user.id
+    
+    if user_id in config.admin_ids:
+        db.set_user_attribute(user_id, "is_admin", True)
     
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     db.start_new_dialog(user_id)
@@ -406,15 +455,23 @@ async def profile_handle(update: Update, context: CallbackContext):
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
         [InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
         [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог")],
-        [InlineKeyboardButton("💰 Купить 100 000 токенов", callback_data="Купить 100 000 токенов")]
+        [InlineKeyboardButton("💰 Купить пакет токенов", callback_data="buy_package")]
         ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     name = db.get_user_attribute(user_id, "first_name")
     balance = db.get_user_attribute(user_id, "token_limit")
-        
-    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance} токенов\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК</i>"
+    
+    s_date, usd_rate = await get_s_date_user_rate(user_id)
+    
+    if db.get_user_attribute(user_id, 'is_admin'): is_admin = "✅"
+    else: is_admin = "❌"
+    
+    if db.get_user_attribute(user_id, 'is_paid_sub'): is_paid_sub = "✅"
+    else: is_paid_sub = "❌" 
+    
+    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance} токенов\n\n🧑‍💻 Админ: {is_admin}\n🤩 Платный подписчик: {is_paid_sub}\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК\n💲 Курс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate:.02f} руб.</b></i>"
     
     await register_user_if_not_exists(update, context, update.message.from_user)
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
@@ -435,8 +492,8 @@ async def profile_button_handle(update: Update, context: CallbackContext):
             await new_dialog_handle(query, context)
         elif query.data == 'Восстановить диалог':
             await retry_handle(query, context)
-        elif query.data == 'Купить 100 000 токенов':
-            await buy_callback(query, context)
+        elif query.data == 'buy_package':
+            await send_prices(query, context)
         elif query.data == 'Что умеет бот':
             await ability_message(query, context)
         else:
@@ -681,7 +738,7 @@ async def is_previous_message_not_answered_yet(update: Update, context: Callback
 
     user_id = update.message.from_user.id
     if user_semaphores[user_id].locked():
-        text = "⏳ Пожалуйста <b>подождите</b> обработки предыдущего сообщения"
+        text = "⏳ <b>Пожалуйста подождите</b> обработки предыдущего сообщения"
         await update.message.reply_text(text, reply_to_message_id=update.message.id, parse_mode=ParseMode.HTML)
         return True
     else:
@@ -824,7 +881,7 @@ async def show_chat_modes_handle(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton(chat_mode_dict["name"], callback_data=f"set_chat_mode|{chat_mode}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Выбери роль:", reply_markup=reply_markup)
+    await update.message.reply_text("Выберите роль:", reply_markup=reply_markup)
 
 
 async def ability_message(update: Update, context: CallbackContext):
@@ -869,23 +926,9 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
     # Получить текущий курс usd to rub
+    s_date, usd_rate = await get_s_date_user_rate(user_id)
     price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
-    old_answer = []
-    
     n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-    s_date = db.get_user_attribute(user_id, 's_date')
-    usd_rate = db.get_user_attribute(user_id, 'usd_rate')
-
-    old_answer.append(s_date)
-    old_answer.append(usd_rate)
-
-    new_answer = usd_rate_check(old_answer)
-
-    s_date = new_answer[0]
-    usd_rate = new_answer[1]
-            
-    db.set_user_attribute(user_id, 's_date', s_date)
-    db.set_user_attribute(user_id, 'usd_rate', usd_rate)
     
     rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
     # n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
@@ -904,6 +947,27 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     text += f"- DALL-E (image generation): {(config.dalle_price_per_one_image * usd_rate):.02f} руб. за 1 изображение</i>"
 
     await update.message.reply_text(text, parse_mode=ParseMode.HTML) 
+
+
+
+async def get_s_date_user_rate(user_id):
+    old_answer = []
+    s_date = db.get_user_attribute(user_id, 's_date')
+    usd_rate = db.get_user_attribute(user_id, 'usd_rate')
+
+    old_answer.append(s_date)
+    old_answer.append(usd_rate)
+
+    new_answer = usd_rate_check(old_answer)
+
+    s_date = new_answer[0]
+    usd_rate = new_answer[1]
+            
+    db.set_user_attribute(user_id, 's_date', s_date)
+    db.set_user_attribute(user_id, 'usd_rate', usd_rate)
+    
+    return s_date, usd_rate
+
 
 
 async def edited_message_handle(update: Update, context: CallbackContext):
@@ -978,14 +1042,14 @@ async def update_token_limit_every_day_at_ten_am(application: Application):
     # Выбираем всех пользователей из базы данных и пополняем их баланс на 10000 токенов
     user_ids_list = db.update_balance_every_day()
 
-    text=f'Ваш баланс равен {config.token_limit_for_users} токенов!\n\nБаланс пополняется каждый день в 10:00 по МСК.\nКупить 100 000 токенов /buy'
+    text=f'Ваш баланс равен {config.token_limit_for_users} токенов!\n\nБаланс пополняется каждый день в 10:00 по МСК.'
     for user_id in user_ids_list:
         await application.bot.send_message(user_id, text)
         
 
 def get_tomorrow_10am():
     tomorrow = datetime.now() + timedelta(days=1)
-    tomorrow_10am = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, hour=10, minute=0, second=0)
+    tomorrow_10am = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, hour=7, minute=0, second=0)
     return tomorrow_10am
     
 
@@ -1024,7 +1088,7 @@ def run_bot() -> None:
     
     # Payment system
     # Add command handler to start the payment invoice
-    application.add_handler(CommandHandler("buy", buy_callback))
+    # application.add_handler(CommandHandler("buy", buy_callback))
     
     # Optional handler if your product requires shipping
     application.add_handler(ShippingQueryHandler(shipping_callback))
@@ -1039,7 +1103,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("get_users", send_users_list_for_admin, filters=user_filter))
     application.add_handler(CommandHandler("get_subs", send_paid_subs_list_for_admin, filters=user_filter))
     application.add_handler(CommandHandler("add", add_token_limit_by_id, filters=user_filter))
-    application.add_handler(CommandHandler("send_notice_to_all", send_update_notice, filters=user_filter))
+    application.add_handler(CommandHandler("send_message", send_update_notice, filters=user_filter))
     application.add_handler(CommandHandler("delete", delete_user, filters=user_filter))
     
 
@@ -1053,9 +1117,10 @@ def run_bot() -> None:
     
     # application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
+    application.add_handler(CallbackQueryHandler(send_buy_callback_handle, pattern="^set_package"))
     application.add_handler(CallbackQueryHandler(profile_button_handle))
 
-    application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
+    # application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
     
     application.add_error_handler(error_handle)
     

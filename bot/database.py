@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 import config
-from get_current_usd import usd_rate_check
+from get_current_usd import CBR_XML_Daily_Ru
 
 
 class Database:
@@ -33,9 +33,7 @@ class Database:
         first_name: str = "",
         last_name: str = "",
     ):
-        old_answer = [int(str(datetime.now())[8:10:]), 75.0]
-        new_answer = usd_rate_check(old_answer)
-        
+        new_answer = CBR_XML_Daily_Ru()
         s_date = new_answer[0]
         usd_rate = new_answer[1]
 
@@ -58,7 +56,10 @@ class Database:
             "s_date": s_date,
             "usd_rate": usd_rate,
             
-            "token_limit": 10000
+            "token_limit": 10000,
+            
+            "is_admin": False,
+            "is_paid_sub": False
         }
 
         if not self.check_if_user_exists(user_id):
@@ -126,20 +127,20 @@ class Database:
         count = 1
         
         for user in self.user_collection.find():
-            user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
-            user_list_csv.append(user_attr)
-            count += 1
+            user_attr = [count, user['_id'], f"@{user['username']}", user['first_name'], user['last_name'], f"{str(user['last_interaction'])[:16:]}", user['n_used_tokens'], user['token_limit'], user['is_admin'], user['is_paid_sub']]
+            if user["username"] != config.bot_username:
+                user_list_csv.append(user_attr)
+                count += 1
         return user_list_csv, count - 1
     
-    
-    def get_paid_subs_list(self, user_id: int, paid_subs_list: list):
+    def get_paid_subs_list(self, user_id: int):
         self.check_if_user_exists(user_id, raise_exception=True)
         paid_subs_list_csv = []
         count = 1
         
         for user in self.user_collection.find():
-            if user['_id'] in paid_subs_list:
-                user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
+            if user['is_paid_sub']:
+                user_attr = [count, user['_id'], f"@{user['username']}", user['first_name'], user['last_name'], f"{str(user['last_interaction'])[:16:]}", user['n_used_tokens'], user['token_limit'], user['is_admin'], user['is_paid_sub']]
                 paid_subs_list_csv.append(user_attr)
                 count += 1
         return paid_subs_list_csv, count - 1
@@ -159,22 +160,7 @@ class Database:
         for user in self.user_collection.find():
             if user["username"] != config.bot_username:
                 user_ids_list.append(int(user['_id']))
-        return user_ids_list
-    
-    
-    def get_users_list(self, user_id: int):
-        self.check_if_user_exists(user_id, raise_exception=True)
-        user_list_csv = []
-        count = 1
-        
-        for user in self.user_collection.find():
-            user_attr = [f"{count}", f"{user['_id']}", f"@{user['username']}", f"{user['first_name']}", f"{user['last_name']}", f"{str(user['last_interaction'])[:16:]}", f"{user['n_used_tokens']}"]
-            if user["username"] != config.bot_username:
-                user_list_csv.append(user_attr)
-                count += 1
-        return user_list_csv, count - 1
-    
-    
+        return user_ids_list  
     
     def delete_user(self, user_id: int):
         try:
