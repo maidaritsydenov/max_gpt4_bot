@@ -1114,7 +1114,7 @@ def run_bot() -> None:
     
 
     application.add_handler(MessageHandler((filters.Regex(f'{config.DALLE_GROUP}') ^ filters.Regex(f'{config.DALLE_PRIVATE}')) & ~filters.COMMAND & user_filter, dalle))
-    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.COMMAND & ~filters.VOICE & ~filters.AUDIO & ~filters.VIDEO & ~filters.VIDEO_NOTE & user_filter, message_handle))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.COMMAND & ~filters.VOICE & ~filters.AUDIO & ~filters.VIDEO & ~filters.VIDEO_NOTE & ~filters.PHOTO & user_filter, message_handle))
     application.add_handler(MessageHandler(filters.Regex(f'{config.CHATGPT_GROUP}') & ~filters.COMMAND & user_filter, message_handle)) # текст
     # application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
     # application.add_handler(CommandHandler("new", new_dialog_handle, filters=user_filter))
