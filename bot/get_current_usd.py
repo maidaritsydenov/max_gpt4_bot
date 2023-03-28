@@ -11,7 +11,7 @@ ANSWER = []
 
 def usd_rate_check(old_list):
     s_date = old_list[0]
-    if int(s_date) - int(str(datetime.now())[8:10:]) > 0:
+    if int(s_date) - int(str(datetime.now())[8:10:]) < 0:
         new_list = CBR_XML_Daily_Ru()
         return new_list
     return old_list

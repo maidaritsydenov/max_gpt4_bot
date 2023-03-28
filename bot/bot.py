@@ -70,8 +70,6 @@ HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
 ⚪ /get_users – Получить csv-файл со списком юзеров
 ⚪ /get_subs – Получить csv-файл со списком платных подписчиков
 ⚪ /send_message text - Отправить text всем юзерам
-⚪ /delete user_id - Удалить юзера из БД
-
 """
 
 ABILITY_MESSAGE = """🔥 <b>Давай расскажу чем я могу тебе помочь?</b>
@@ -176,7 +174,9 @@ async def reset_token_limit(update: Update, context: CallbackContext):
             db.set_user_attribute(int(context.args[0]), 'token_limit', ZERO)
             username = db.get_user_attribute(int(context.args[0]), "username")
             text=f"Баланс пользователя с user_id: <code>{int(context.args[0])} username: @{username}</code> обнулен!"
+            text_for_user = 'Администратор обнулил Ваш баланс.'
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            await context.bot.send_message(int(context.args[0]), text_for_user, parse_mode=ParseMode.HTML)
     else:            
         await update.message.reply_text("Эта команда доступна только администраторам.")
         return
@@ -279,7 +279,7 @@ async def send_prices(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton(package_dict["name"], callback_data=f"set_package|{package}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Выберите пакет токенов:\n\n<b>Платежная система:</b> ЮMoney", reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+    await update.message.edit_text("<b>Платежная система:</b> ЮMoney\n\n- Токены не сгорают\n- Купленные пакеты токенов суммируются", reply_markup=reply_markup, parse_mode=ParseMode.HTML)
     
 
 async def send_buy_callback_handle(update: Update, context: CallbackContext):
@@ -301,8 +301,8 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, name:
     """Payment system. Отправка инвойса без оплаты доставки."""
 
     user_id = update.callback_query.from_user.id
-    title = f"🛒 Корзина: {name}"
-    description = 'Токены не сгорают. Купленные пакеты токенов суммируются.'
+    title = "🛒 Корзина"
+    description = name
     # select a payload just for you to recognize its the donation from your bot
     payload = "Custom-Payload"
     # In order to get a provider_token see https://core.telegram.org/bots/payments#getting-a-token
@@ -403,8 +403,7 @@ async def start_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     keyboard = [
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
-        [InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
-        [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог")],
+        [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог"), InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
         [InlineKeyboardButton("💰 Купить пакет токенов", callback_data="buy_package")]
         ]
     
@@ -455,8 +454,7 @@ async def profile_handle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     keyboard = [
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
-        [InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
-        [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог")],
+        [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог"), InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
         [InlineKeyboardButton("💰 Купить пакет токенов", callback_data="buy_package")]
         ]
     
@@ -509,28 +507,28 @@ async def profile_button_handle(update: Update, context: CallbackContext):
         return
     
 
-async def delete_user(update: Update, context: CallbackContext):
-    """Функция для админа. Удаляет юзера/бота из БД (Если в юзерлист попал бот)."""
-    user_id = update.message.from_user.id
-    chat_id=update.effective_chat.id
-    text="Используйте следующую конструкцию:\n\n/delete {user_or_bot_id}"
+# async def delete_user(update: Update, context: CallbackContext):
+#     """Функция для админа. Удаляет юзера/бота из БД (Если в юзерлист попал бот)."""
+#     user_id = update.message.from_user.id
+#     chat_id=update.effective_chat.id
+#     text="Используйте следующую конструкцию:\n\n/delete {user_or_bot_id}"
     
-    if user_id in config.admin_ids:
-        try:
-            if not context.args:
-                await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
-                return
-            else:
-                int(context.args[0])
-                text = db.delete_user(int(context.args[0]))
-                await context.bot.send_message(user_id, text, parse_mode=ParseMode.HTML)
-        except ValueError:
-            text="Используйте следующую конструкцию:\n\n/delete {user_or_bot_id}. Удалить функцию"
-            await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
-            return
-    else:            
-        await update.message.reply_text("Эта команда доступна только администраторам.")
-        return
+#     if user_id in config.admin_ids:
+#         try:
+#             if not context.args:
+#                 await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+#                 return
+#             else:
+#                 int(context.args[0])
+#                 text = db.delete_user(int(context.args[0]))
+#                 await context.bot.send_message(user_id, text, parse_mode=ParseMode.HTML)
+#         except ValueError:
+#             text="Используйте следующую конструкцию:\n\n/delete {user_or_bot_id}. Удалить функцию"
+#             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+#             return
+#     else:            
+#         await update.message.reply_text("Эта команда доступна только администраторам.")
+#         return
 
 
 async def help_handle_for_admins(update: Update, context: CallbackContext):
@@ -554,7 +552,7 @@ async def retry_handle(update: Update, context: CallbackContext):
 
     dialog_messages = db.get_dialog_messages(user_id, dialog_id=None)
     if len(dialog_messages) == 0:
-        await update.message.reply_text("Нет сообщений для восстановления диалога 🤷‍♂️")
+        await update.message.edit_text("Нет сообщений для восстановления диалога 🤷‍♂️")
         return
 
     last_dialog_message = dialog_messages.pop()
@@ -581,7 +579,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         if use_new_dialog_timeout:
             if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
                 db.start_new_dialog(user_id)
-                await update.message.reply_text(f"Начат новый диалог (Роль: <b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b>) ✅", parse_mode=ParseMode.HTML)
+                await update.message.edit_text(f"Начат новый диалог (Роль: <b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b>) ✅", parse_mode=ParseMode.HTML)
         db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
         # send typing action
@@ -869,7 +867,7 @@ async def new_dialog_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
     db.start_new_dialog(user_id)
-    await update.message.reply_text("Начат новый диалог ✅")
+    # await update.message.reply_text("Начат новый диалог ✅")
 
     chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
     await update.message.reply_text(f"{openai_utils.CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
@@ -887,7 +885,7 @@ async def show_chat_modes_handle(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton(chat_mode_dict["name"], callback_data=f"set_chat_mode|{chat_mode}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Выберите роль:", reply_markup=reply_markup)
+    await update.message.edit_text("Выберите роль:", reply_markup=reply_markup)
 
 
 async def ability_message(update: Update, context: CallbackContext):
@@ -906,7 +904,7 @@ async def ability_message(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     # path_to_photo_file_linux = f'{CWD}/static'
 
-    await update.message.reply_text(ABILITY_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    await update.message.edit_text(ABILITY_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     await update.message.reply_media_group(media=links_to_photo, disable_notification=True)
 
 
@@ -958,11 +956,11 @@ async def show_balance_handle(update: Update, context: CallbackContext):
 
 async def get_s_date_user_rate(user_id):
     old_answer = []
-    s_date = db.get_user_attribute(user_id, 's_date')
-    usd_rate = db.get_user_attribute(user_id, 'usd_rate')
+    s_date_old = db.get_user_attribute(user_id, 's_date')
+    usd_rate_old = db.get_user_attribute(user_id, 'usd_rate')
 
-    old_answer.append(s_date)
-    old_answer.append(usd_rate)
+    old_answer.append(s_date_old)
+    old_answer.append(usd_rate_old)
 
     new_answer = usd_rate_check(old_answer)
 
@@ -1110,11 +1108,11 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("get_subs", send_paid_subs_list_for_admin, filters=user_filter))
     application.add_handler(CommandHandler("add", add_token_limit_by_id, filters=user_filter))
     application.add_handler(CommandHandler("send_message", send_update_notice, filters=user_filter))
-    application.add_handler(CommandHandler("delete", delete_user, filters=user_filter))
+    # application.add_handler(CommandHandler("delete", delete_user, filters=user_filter))
     
 
     application.add_handler(MessageHandler((filters.Regex(f'{config.DALLE_GROUP}') ^ filters.Regex(f'{config.DALLE_PRIVATE}')) & ~filters.COMMAND & user_filter, dalle))
-    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.COMMAND & ~filters.VOICE & ~filters.AUDIO & ~filters.VIDEO & ~filters.VIDEO_NOTE & ~filters.PHOTO & user_filter, message_handle))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.COMMAND & ~filters.VOICE & ~filters.AUDIO & ~filters.VIDEO & ~filters.VIDEO_NOTE & ~filters.PHOTO  & ~filters.ANIMATION & ~filters.Sticker.ALL & user_filter, message_handle))
     application.add_handler(MessageHandler(filters.Regex(f'{config.CHATGPT_GROUP}') & ~filters.COMMAND & user_filter, message_handle)) # текст
     # application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
     # application.add_handler(CommandHandler("new", new_dialog_handle, filters=user_filter))
