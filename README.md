@@ -48,8 +48,8 @@
 ## Usage
 В приватных чатах:
 ```
-1. Текстовое сообщение: Запрос текста - текст, Запрос изображения - "Нарисуй", Запрос голосового сообщения - "Расскажи"
-2. Голосовое сообщение: Запрос текста - голосовое сообщение
+1. Запрос текста - текст | Запрос изображения - "Нарисуй" | Запрос голосового сообщения - "Расскажи"
+2. Запрос текста - голосовое сообщение
 ```
 
 В группах:
@@ -102,18 +102,21 @@ cp config/config.yml.example config/config.yml
 ```
 
 * Заполнить следующие константы в файле config.yml:
-- telegram_token: ""
-- openai_api_key: ""
-- SBER_SALUTE_TOKEN: ""
-- payment_token: ""
-- admin_ids: []
-- bot_username: ""
+- telegram_token: "" # телеграм токен
+- openai_api_key: "" # апи ключ с сайта openai.com
+- SBER_SALUTE_TOKEN: "" # апи ключ с сайта salutespeech.ru
+- payment_token: "" # токен с botfather payments (yoomoney)
+- admin_ids: [] # id юзеров - администраторов
+- bot_username: "" # никнейм бота (без @)
 
 
 * Выполнить сборку и запуск контейнеров
 ```
 sudo docker compose up -d --build
 ```
+
+
+* Перед повторной сборкой необходимо удалить папку ".mongodb", удалить все images и volumes в докере.
 
 
 ### Documentation:

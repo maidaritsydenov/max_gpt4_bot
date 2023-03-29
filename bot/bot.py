@@ -17,7 +17,6 @@ from telegram import (
     InlineKeyboardMarkup, 
     BotCommand,
     LabeledPrice,
-    ShippingOption
 )
 from telegram.ext import (
     Application,
@@ -29,7 +28,6 @@ from telegram.ext import (
     AIORateLimiter,
     filters,
     PreCheckoutQueryHandler,
-    ShippingQueryHandler,
     ContextTypes,
 )
 from telegram.constants import ParseMode
@@ -148,6 +146,9 @@ async def check_token_limit(update: Update, context: CallbackContext):
 
 
 async def reset_token_limit(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     """Функция для админа. Обнуление token_limit у юзера {user_id}."""
 
     user_id = update.message.from_user.id
@@ -186,6 +187,9 @@ async def reset_token_limit(update: Update, context: CallbackContext):
 
 async def add_token_limit_by_id(update: Update, context: CallbackContext):
     """Функция для админа. Добавление {amount} токенов к token_limit у юзера {user_id}."""
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
 
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
@@ -222,6 +226,9 @@ async def add_token_limit_by_id(update: Update, context: CallbackContext):
 
 async def send_users_list_for_admin(update: Update, context: CallbackContext):
     """Функция для админа. Отправляет файл со списком юзеров."""
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
@@ -247,7 +254,9 @@ async def send_users_list_for_admin(update: Update, context: CallbackContext):
 
 async def send_paid_subs_list_for_admin(update: Update, context: CallbackContext):
     """Функция для админа. Отправляет файл со списком платных подписчиков."""
-    
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     user_id = update.message.from_user.id
     
     date = (str(datetime.now())[:10:])
@@ -261,7 +270,7 @@ async def send_paid_subs_list_for_admin(update: Update, context: CallbackContext
         with open(path_to_users_file_linux, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(header)
-            writer.writerows( paid_subs_list_csv)
+            writer.writerows(paid_subs_list_csv)
 
         await update.message.reply_document(open(path_to_users_file_linux, 'rb'), caption=f'👤 Всего платных подписчиков: <b>{count}</b>', parse_mode=ParseMode.HTML)
     else:
@@ -326,35 +335,18 @@ async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, name:
             return
 
 
-async def shipping_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Payment system. Answers the ShippingQuery with ShippingOptions"""
-    query = update.shipping_query
-    # check the payload, is this from your bot?
-    if query.invoice_payload != "Custom-Payload":
-        # answer False pre_checkout_query
-        await query.answer(ok=False, error_message="Something went wrong...")
-        return
-
-    # First option has a single LabeledPrice
-    options = [ShippingOption("1", "Shipping Option A", [LabeledPrice("A", 100)])]
-    # second option has an array of LabeledPrice objects
-    price_list = [LabeledPrice("B1", 150), LabeledPrice("B2", 200)]
-    options.append(ShippingOption("2", "Shipping Option B", price_list))
-    await query.answer(ok=True, shipping_options=options)
-
-
-
-# after (optional) shipping, it's the pre-checkout
-async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+# it's the pre-checkout
+async def precheckout_callback(update: Update, context: CallbackContext) -> None:
     """Payment system. Answers the PreQecheckoutQuery"""
     query = update.pre_checkout_query
     # check the payload, is this from your bot?
-    if query.invoice_payload != "Custom-Payload":
-        # answer False pre_checkout_query
-        await query.answer(ok=False, error_message="Something went wrong...")
-    else:
+    if query.invoice_payload == "Custom-Payload":
+        # Если все данные для оплаты введены правильно, возвращаем True
         await query.answer(ok=True)
-
+    else:
+        # Если данные для оплаты введены неверно, возвращаем False
+        await query.answer(ok=False, error_message="Неверный идентификатор платежа")
+        
 
 # finally, after contacting the payment provider...
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -363,19 +355,34 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
         69: 10000,
         199: 50000,
         399: 100000
-    } # TODO - Переписать функцию. Учесть комиссию
+    }
     
+    date = (str(datetime.now())[:10:])
     user_id = update.message.from_user.id
+    
     total_amount = int(update.message.successful_payment.total_amount)/100
-
+    provider_payment_charge_id = update.message.successful_payment.provider_payment_charge_id  
+    
     db.set_user_attribute(user_id, 'token_limit', prices_dict[total_amount] + db.get_user_attribute(user_id, 'token_limit'))
     db.set_user_attribute(user_id, 'is_paid_sub', True)
+    
+    header = ["Date", "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Balance', 'Is_admin', 'Is_paid_sub', "Provider_payment_charge_id"]
+    user_attr = db.get_one_paid_sub_list(user_id, date, provider_payment_charge_id)
+    path_to_users_file_linux = f'{CWD}/users/provider_payment_charge_id.csv'
+    with open(path_to_users_file_linux, 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(header)
+        writer.writerows(user_attr)
 
     await update.message.reply_text(f"Спасибо за платеж❤️\n\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')} токенов!\nПроверить баланс можно в личном кабинете /profile")
+    await context.bot.send_document(config.admin_ids[0], open(path_to_users_file_linux, 'rb'), caption=f'💰 Совершен платеж!', parse_mode=ParseMode.HTML)
 
 
 async def copy_to_all(update: Update, context: CallbackContext):
     """Функция для админа. Пересылает сообщение всем юзерам. (Реклама)"""
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
     message = update.message
@@ -397,6 +404,9 @@ async def copy_to_all(update: Update, context: CallbackContext):
 
 async def send_text_to_all(update: Update, context: CallbackContext):
     """Функция для админа. Отправляет текст после команды /send_message всем юзерам."""
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
@@ -423,6 +433,9 @@ async def send_text_to_all(update: Update, context: CallbackContext):
     
 
 async def start_handle(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     await register_user_if_not_exists(update, context, update.message.from_user)
     keyboard = [
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
@@ -461,6 +474,9 @@ async def start_handle(update: Update, context: CallbackContext):
 
 
 async def help_handle(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
     chat_id = update.effective_chat.id
@@ -474,6 +490,9 @@ async def help_handle(update: Update, context: CallbackContext):
     
 
 async def profile_handle(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     user_id = update.message.from_user.id
     keyboard = [
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
@@ -555,6 +574,9 @@ async def profile_button_handle(update: Update, context: CallbackContext):
 
 
 async def help_handle_for_admins(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
     if user_id in config.admin_ids:
@@ -775,6 +797,9 @@ async def is_previous_message_not_answered_yet(update: Update, context: Callback
 async def dalle(update: Update, context):
     """Функция генерации картинок с помощью DALL-E от OpenAI.
     TO DO: добавить другие режимы: редактирование картинок + генерация версий."""
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
 
     await register_user_if_not_exists(update, context, update.message.from_user)
     if not await check_token_limit(update, context): return
@@ -833,6 +858,9 @@ async def dalle(update: Update, context):
 
 
 async def voice_message_handle(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        await edited_message_handle(update, context)
+        return
 
     chat_id = str(update.effective_chat.id)
     if (GROUP_ATTR in chat_id):
@@ -915,7 +943,7 @@ async def ability_message(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     if await is_previous_message_not_answered_yet(update, context): return
 
-    user_id = update.message.from_user.id
+    # user_id = update.message.from_user.id
 
     links_to_photo = [
         telegram.InputMediaPhoto('https://i.postimg.cc/FFS7ZcGf/1.jpg'),
@@ -998,7 +1026,7 @@ async def get_s_date_user_rate(user_id):
 
 
 async def edited_message_handle(update: Update, context: CallbackContext):
-    text = "🥲 К сожалению, <b> измененные </b> сообщения не поддерживаются"
+    text = "🥲 К сожалению, <b>измененные сообщения</b> не поддерживаются"
     await update.edited_message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
@@ -1113,12 +1141,10 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
     application.add_handler(CommandHandler("profile", profile_handle, filters=user_filter))
     
-    # Payment system
+    
     # Add command handler to start the payment invoice
     # application.add_handler(CommandHandler("buy", buy_callback))
-    
-    # Optional handler if your product requires shipping
-    application.add_handler(ShippingQueryHandler(shipping_callback))
+
     # Pre-checkout handler to final check
     application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     # Success! Notify your user!

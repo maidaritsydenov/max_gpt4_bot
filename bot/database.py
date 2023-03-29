@@ -145,6 +145,16 @@ class Database:
                 count += 1
         return paid_subs_list_csv, count - 1
 
+
+    def get_one_paid_sub_list(self, user_id, date, provider_payment_charge_id):
+        self.check_if_user_exists(user_id, raise_exception=True)
+        paid_used = []  
+        for user in self.user_collection.find():
+            if user["_id"] == user_id:
+                user_attr = [date, user['_id'], f"@{user['username']}", user['first_name'], user['last_name'], f"{str(user['last_interaction'])[:16:]}", user['n_used_tokens'], user['token_limit'], user['is_admin'], user['is_paid_sub'], provider_payment_charge_id]
+                paid_used.append(user_attr)        
+        return paid_used
+    
     
     def update_balance_every_day(self):
         user_ids_list = []

@@ -1,10 +1,13 @@
 telegram_token: ""
 openai_api_key: ""
-payment_token: ""
 SBER_SALUTE_TOKEN: ""
 
-admin_ids: [] # Список id админов
-bot_username: "" # Без @
+# yookassa
+payment_token: "390540012:LIVE:32564"
+
+
+admin_ids: [740525701]
+bot_username: 'max_gpt4_bot'
 
 # config
 use_chatgpt_api: true
