@@ -155,7 +155,7 @@ class Database:
                 user_ids_list.append(user_id)
         return user_ids_list
     
-    def send_update_notice(self):
+    def for_text_to_all(self):
         user_ids_list = []
         for user in self.user_collection.find():
             if user["username"] != config.bot_username:

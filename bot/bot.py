@@ -70,6 +70,8 @@ HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
 ⚪ /get_users – Получить csv-файл со списком юзеров
 ⚪ /get_subs – Получить csv-файл со списком платных подписчиков
 ⚪ /send_message text - Отправить text всем юзерам
+
+📸 Отправьте фото, видео, кружок или гиф с подписью для перессылки всем юзерам
 """
 
 ABILITY_MESSAGE = """🔥 <b>Давай расскажу чем я могу тебе помочь?</b>
@@ -370,9 +372,30 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
     db.set_user_attribute(user_id, 'is_paid_sub', True)
 
     await update.message.reply_text(f"Спасибо за платеж❤️\n\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')} токенов!\nПроверить баланс можно в личном кабинете /profile")
+
+
+async def copy_to_all(update: Update, context: CallbackContext):
+    """Функция для админа. Пересылает сообщение всем юзерам. (Реклама)"""
+    user_id = update.message.from_user.id
+    chat_id=update.effective_chat.id
+    message = update.message
+
+    if user_id in config.admin_ids:
+        try:
+            user_ids_list = db.for_text_to_all()           
+            for user in user_ids_list:
+                await context.bot.copy_message(user, from_chat_id=message.chat_id, message_id=message.message_id, parse_mode=ParseMode.HTML)
+
+        except ValueError:
+            text="Ошибка. copy_to_all()"
+            await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            return
+    else:            
+        await update.message.reply_text("Эта команда доступна только администраторам.")
+        return
     
 
-async def send_update_notice(update: Update, context: CallbackContext):
+async def send_text_to_all(update: Update, context: CallbackContext):
     """Функция для админа. Отправляет текст после команды /send_message всем юзерам."""
     
     user_id = update.message.from_user.id
@@ -386,7 +409,7 @@ async def send_update_notice(update: Update, context: CallbackContext):
                 return
             else:
                 text = ' '.join(map(str, context.args))
-                user_ids_list = db.send_update_notice()                
+                user_ids_list = db.for_text_to_all()                
                 for user in user_ids_list:
                     await context.bot.send_message(user, text, parse_mode=ParseMode.HTML)
 
@@ -403,7 +426,7 @@ async def start_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     keyboard = [
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
-        [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог"), InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
+        [InlineKeyboardButton("⬅️ Восстановить диалог", callback_data="Восстановить диалог"), InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
         [InlineKeyboardButton("💰 Купить пакет токенов", callback_data="buy_package")]
         ]
     
@@ -454,7 +477,7 @@ async def profile_handle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     keyboard = [
         [InlineKeyboardButton("🎭 Выбрать роль", callback_data="Выбрать роль")],
-        [InlineKeyboardButton("⬅️ Восстановить последний диалог", callback_data="Восстановить диалог"), InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
+        [InlineKeyboardButton("⬅️ Восстановить диалог", callback_data="Восстановить диалог"), InlineKeyboardButton("🆕 Начать новый диалог", callback_data="Начать диалог")],
         [InlineKeyboardButton("💰 Купить пакет токенов", callback_data="buy_package")]
         ]
     
@@ -813,7 +836,7 @@ async def voice_message_handle(update: Update, context: CallbackContext):
 
     chat_id = str(update.effective_chat.id)
     if (GROUP_ATTR in chat_id):
-        text = f'Распознавание голосовых сообщений не работает в группе\nПерейдите в бота чтобы воспользоваться данным функционалом\n\n@{config.bot_username}'
+        text = f'💢 Распознавание голосовых сообщений не работает в группе\n\nПерейдите в бота чтобы воспользоваться данным функционалом.\n\n@{config.bot_username}'
         await context.bot.send_message(update.effective_chat.id, text, parse_mode=ParseMode.HTML)
     else:
         await register_user_if_not_exists(update, context, update.message.from_user)
@@ -1107,18 +1130,23 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("get_users", send_users_list_for_admin, filters=user_filter))
     application.add_handler(CommandHandler("get_subs", send_paid_subs_list_for_admin, filters=user_filter))
     application.add_handler(CommandHandler("add", add_token_limit_by_id, filters=user_filter))
-    application.add_handler(CommandHandler("send_message", send_update_notice, filters=user_filter))
+    application.add_handler(CommandHandler("send_message", send_text_to_all, filters=user_filter))
     # application.add_handler(CommandHandler("delete", delete_user, filters=user_filter))
     
 
     application.add_handler(MessageHandler((filters.Regex(f'{config.DALLE_GROUP}') ^ filters.Regex(f'{config.DALLE_PRIVATE}')) & ~filters.COMMAND & user_filter, dalle))
-    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.COMMAND & ~filters.VOICE & ~filters.AUDIO & ~filters.VIDEO & ~filters.VIDEO_NOTE & ~filters.PHOTO  & ~filters.ANIMATION & ~filters.Sticker.ALL & user_filter, message_handle))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & ~filters.COMMAND & ~filters.VOICE & ~filters.AUDIO & ~filters.VIDEO & ~filters.VIDEO_NOTE & ~filters.PHOTO  & ~filters.ANIMATION & ~filters.Sticker.ALL & ~filters.Document.ALL & user_filter, message_handle))
     application.add_handler(MessageHandler(filters.Regex(f'{config.CHATGPT_GROUP}') & ~filters.COMMAND & user_filter, message_handle)) # текст
     # application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
     # application.add_handler(CommandHandler("new", new_dialog_handle, filters=user_filter))
 
-    application.add_handler(MessageHandler(filters.VOICE & user_filter, voice_message_handle))
-    
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.VOICE & user_filter, voice_message_handle))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.PHOTO & user_filter, copy_to_all))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.VIDEO & user_filter, copy_to_all))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.VIDEO_NOTE & user_filter, copy_to_all))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.ANIMATION & user_filter, copy_to_all))
+
+        
     # application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
     application.add_handler(CallbackQueryHandler(send_buy_callback_handle, pattern="^set_package"))

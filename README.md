@@ -36,7 +36,10 @@
 - /get_users – Получить csv-файл со списком юзеров
 - /get_subs – Получить csv-файл со списком платных подписчиков
 - /send_message text - Отправить text всем юзерам
-- /delete user_id - Удалить юзера из БД
+- /delete user_id - Удалить юзера из БД (#)
+
+- 📸 Отправьте фото, видео, кружок или гиф с подписью для перессылки всем юзерам
+
 
 <p align="center">
 <a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/maxima_gpt4_bot.gif" width="239" height="480" /></a>
@@ -51,7 +54,7 @@
 
 В группах:
 ```
-Макс, | Макс, нарисуй | Макс, расскажи)
+Макс, | Макс, нарисуй | Макс, расскажи
 ```
 
 
@@ -98,14 +101,12 @@ cp config/config.env.example config/config.env
 cp config/config.yml.example config/config.yml
 ```
 
-* Заполнить следующие константы:
-config.yml:
+* Заполнить следующие константы в файле config.yml:
 - telegram_token: ""
 - openai_api_key: ""
 - SBER_SALUTE_TOKEN: ""
-- admin_ids: []
-- paid_ids: []
 - payment_token: ""
+- admin_ids: []
 - bot_username: ""
 
 

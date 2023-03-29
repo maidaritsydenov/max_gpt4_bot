@@ -27,7 +27,6 @@ admin_ids = config_yaml['admin_ids']
 allowed_telegram_usernames = config_yaml["allowed_telegram_usernames"]
 new_dialog_timeout = config_yaml["new_dialog_timeout"]
 token_limit_for_users = config_yaml["token_limit_for_users"]
-token_limit_for_paid_subs = config_yaml["token_limit_for_paid_subs"]
 update_token_limit = config_yaml["update_token_limit"]
 enable_message_streaming = config_yaml.get("enable_message_streaming", True)
 mongodb_uri = f"mongodb://mongo:{config_env['MONGODB_PORT']}"
