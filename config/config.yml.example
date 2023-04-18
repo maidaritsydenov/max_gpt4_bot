@@ -12,7 +12,7 @@ bot_username: 'max_gpt4_bot'
 # config
 use_chatgpt_api: true
 allowed_telegram_usernames: []  # if empty, the bot is available to anyone. pass a username string to allow it and/or user ids as integers
-new_dialog_timeout: 14400  # new dialog starts after timeout (in seconds)
+new_dialog_timeout: 600  # new dialog starts after timeout (in seconds)
 enable_message_streaming: true  # if set, messages will be shown to user word-by-word
 
 token_limit_for_users: 10000 # Лимит токенов

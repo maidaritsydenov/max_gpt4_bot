@@ -513,7 +513,7 @@ async def profile_handle(update: Update, context: CallbackContext):
     if db.get_user_attribute(user_id, 'is_paid_sub'): is_paid_sub = "✅"
     else: is_paid_sub = "❌" 
     
-    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance} токенов\n\n🧑‍💻 Админ: {is_admin}\n🤩 Платный подписчик: {is_paid_sub}\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК\n💲 Курс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate:.02f} руб.</b></i>"
+    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance} токенов\n\n🧑‍💻 Админ: {is_admin}\n🤩 Платный подписчик: {is_paid_sub}\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК\n💲 Курс доллара к рублю на {s_date.date}: <b>{usd_rate:.02f} руб.</b></i>"
     
     await register_user_if_not_exists(update, context, update.message.from_user)
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
@@ -994,7 +994,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     # text += f"Вы потратили <b>{n_spent_rub:.03f} руб.</b>\n"
     # text += f"Вы использовали <b>{n_used_tokens}</b> токенов\n\n"
     
-    text += f'💲 Курс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate:.02f} руб.</b>\n\n'
+    text += f'💲 Курс доллара к рублю на {s_date.date}: <b>{usd_rate:.02f} руб.</b>\n\n'
 
     text += "🏷️ Prices\n"
     text += f"<i>- ChatGPT: {rub_rate_per_1000_tokens:.02f} руб. за 1000 токенов\n"
@@ -1013,7 +1013,7 @@ async def get_s_date_user_rate(user_id):
     old_answer.append(s_date_old)
     old_answer.append(usd_rate_old)
 
-    new_answer = usd_rate_check(old_answer)
+    new_answer = usd_rate_check(old_answer, user_id)
 
     s_date = new_answer[0]
     usd_rate = new_answer[1]
@@ -1072,7 +1072,7 @@ async def debbug(update: Update, context: CallbackContext, n_used_tokens_last_me
     old_answer.append(s_date)
     old_answer.append(usd_rate)
 
-    new_answer = usd_rate_check(old_answer)
+    new_answer = usd_rate_check(old_answer, user_id)
 
     s_date = new_answer[0]
     usd_rate = new_answer[1]
@@ -1083,7 +1083,7 @@ async def debbug(update: Update, context: CallbackContext, n_used_tokens_last_me
     rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
     n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
     
-    text = f'\nКурс доллара к рублю на {str(datetime.now())[:7:]}-{s_date}: <b>{usd_rate} руб.</b>\n\n'
+    text = f'\nКурс доллара к рублю на {s_date.date}: <b>{usd_rate} руб.</b>\n\n'
     text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f} руб.</b>\n"
     text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
     text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"
