@@ -3,11 +3,11 @@ openai_api_key: ""
 SBER_SALUTE_TOKEN: ""
 
 # yookassa
-payment_token: "390540012:LIVE:32564"
+payment_token: ""
 
 
-admin_ids: [740525701]
-bot_username: 'max_gpt4_bot'
+admin_ids: []
+bot_username: ''
 
 # config
 use_chatgpt_api: true
