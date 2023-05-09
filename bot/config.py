@@ -1,5 +1,6 @@
 import yaml
 import dotenv
+import platform
 from pathlib import Path
 
 config_dir = Path(__file__).parent.parent.resolve() / "config"
@@ -19,8 +20,7 @@ bot_username = config_yaml["bot_username"]
 
 SBER_SALUTE_TOKEN = config_yaml['SBER_SALUTE_TOKEN']
 SBER_SALUTE_SCOPE = config_yaml['SBER_SALUTE_SCOPE']
-PATH_TO_SERT_LINUX = config_yaml['PATH_TO_SERT_LINUX']
-# PATH_TO_SERT_WINDOWS = config_yaml['PATH_TO_SERT_WINDOWS']
+PATH_TO_SERTIFICATE = config_yaml['PATH_TO_SERTIFICATE']
 
 use_chatgpt_api = config_yaml.get("use_chatgpt_api", True)
 admin_ids = config_yaml['admin_ids']
@@ -29,7 +29,13 @@ new_dialog_timeout = config_yaml["new_dialog_timeout"]
 token_limit_for_users = config_yaml["token_limit_for_users"]
 update_token_limit = config_yaml["update_token_limit"]
 enable_message_streaming = config_yaml.get("enable_message_streaming", True)
-mongodb_uri = f"mongodb://mongo:{config_env['MONGODB_PORT']}"
+
+
+platname = platform.system()
+if platname == 'Windows':
+    mongodb_uri = "mongodb://localhost:27017/"
+else:
+    mongodb_uri = f"mongodb://mongo:{config_env['MONGODB_PORT']}"
 
 # chat_modes
 with open(config_dir / "chat_modes.yml", 'r') as f:

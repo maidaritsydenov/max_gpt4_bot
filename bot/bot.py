@@ -6,31 +6,18 @@ import html
 import json
 import tempfile
 import pydub
+import platform
 from pathlib import Path
 from datetime import datetime, timedelta
 
 import telegram
-from telegram import (
-    Update, 
-    User, 
-    InlineKeyboardButton, 
-    InlineKeyboardMarkup, 
-    BotCommand,
-    LabeledPrice,
-)
-from telegram.ext import (
-    Application,
-    ApplicationBuilder,
-    CallbackContext,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    AIORateLimiter,
-    filters,
-    PreCheckoutQueryHandler,
-    ContextTypes,
-)
+from telegram import (Update, User, InlineKeyboardButton, InlineKeyboardMarkup,
+                      BotCommand, LabeledPrice)
 from telegram.constants import ParseMode
+from telegram.ext import (Application, ApplicationBuilder, CallbackContext,
+                          CommandHandler, MessageHandler, CallbackQueryHandler,
+                          AIORateLimiter, filters, PreCheckoutQueryHandler, ContextTypes)
+
 
 import openai
 
@@ -39,64 +26,19 @@ import database
 import openai_utils
 from get_current_usd import usd_rate_check
 from synthesis import main
+import messages
 
 
 # setup
 db = database.Database()
 logger = logging.getLogger(__name__)
 user_semaphores = {}
+platname = platform.system()
 
 ZERO = 0
 GROUP_ATTR = '-'
 CWD = Path.cwd()
 
-HELP_MESSAGE = """
-✴️ <b>Что такое токен?</b>
-<i>Топливо для работы нейросети. После каждого запроса количество токенов уменьшается.</i>
-
-✴️ <b>Как тратятся токены?</b>
-<i>- 1 токен ~ 1 символ на русском
-- 1 токен ~ 4 символа на английском</i>
-
-✴️ <b>Что делать, если закончились бесплатные токены?</b>
-- <i>Дождитесь пополнения бесплатных токенов, которое происходит ежедневно в 10:00 по МСК, или купите дополнительный пакет токенов. Узнать остаток токенов можно в личном кабинете /profile.</i>
-"""
-
-HELP_MESSAGE_FOR_ADMINS = """Commands for admins:
-⚪ /reset user_id – Обнулить лимит токенов у юзера
-⚪ /add user_id amount – Пополнить лимит токенов у юзера
-⚪ /get_users – Получить csv-файл со списком юзеров
-⚪ /get_subs – Получить csv-файл со списком платных подписчиков
-⚪ /send_message text - Отправить text всем юзерам
-
-📸 Отправьте фото, видео, кружок или гиф с подписью для перессылки всем юзерам
-"""
-
-ABILITY_MESSAGE = """🔥 <b>Давай расскажу чем я могу тебе помочь?</b>
-
-<i>1️⃣ Создать резюме. С моей помощью ты можешь устроиться на работу мечты, ведь я могу написать хорошее резюме
-2️⃣ Написать текст на любую тему. Это поможет тебе в работе и учебе
-3️⃣ Перевести текст с иностранного языка
-4️⃣ Ответить на интересующие тебя вопросы. Чаще всего у меня получается это лучше, чем у известных поисковиков
-5️⃣ Написать код, перевести его с одного языка на другой и найти ошибки
-6️⃣ Планировать и осуществлять расчеты. Например, ты можешь за считанные секунды получить готовый план питания для похудения</i>
-
-🔉 <b>Я могу понимать твои голосовые сообщения и отвечать на них!</b>
-
-🗣 <b>Все это я могу рассказать тебе голосом</b>
-Для этого используй конструкцию:
-<code>"Расскажи"</code> в личных сообщениях
-<code>"Макс", расскажи</code> в группах
-
-🖼 <b>А еще я могу нарисовать изображение по твоему описанию</b>
-Для этого используй конструкцию:
-<code>"Нарисуй"</code> в личных сообщениях
-<code>"Макс, нарисуй"</code> в группах
-
-💡Это лишь малая часть моего функционала. Задавай мне любые задачи, а я постараюсь тебе помочь.
-
-👇🏻Жми кнопку <b>«Начать чат»</b> 👇🏻
-"""
 
 
 def split_text_into_chunks(text, chunk_size):
@@ -234,19 +176,22 @@ async def send_users_list_for_admin(update: Update, context: CallbackContext):
     chat_id=update.effective_chat.id
 
     date = (str(datetime.now())[:10:])
-    path_to_users_file_linux = f'{CWD}/users/users_{date}.csv'
-    # path_to_users_file_windows = f'{CWD}/max_gpt4_bot/users/users.csv'
+    if platname == 'Windows':
+        path_to_users_file = f'{CWD}/max_gpt4_bot/users/users.csv'
+    else:
+        path_to_users_file = f'{CWD}/users/users_{date}.csv'
+    
     
     if user_id in config.admin_ids:
         user_list_csv, count = db.get_users_list(user_id)
 
         header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Balance', 'Is_admin', 'Is_paid_sub']
-        with open(path_to_users_file_linux, 'w', newline='') as csvfile:
+        with open(path_to_users_file, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(header)
             writer.writerows(user_list_csv)
 
-        await update.message.reply_document(open(path_to_users_file_linux, 'rb'), caption=f'👤 Всего юзеров: <b>{count}</b>', parse_mode=ParseMode.HTML)
+        await update.message.reply_document(open(path_to_users_file, 'rb'), caption=f'👤 Всего юзеров: <b>{count}</b>', parse_mode=ParseMode.HTML)
     else:
         await update.message.reply_text("Эта команда доступна только администраторам.")
         return
@@ -260,19 +205,22 @@ async def send_paid_subs_list_for_admin(update: Update, context: CallbackContext
     user_id = update.message.from_user.id
     
     date = (str(datetime.now())[:10:])
-    path_to_users_file_linux = f'{CWD}/users/paid_subs_{date}.csv'
-    # path_to_users_file_windows = f'{CWD}/max_gpt4_bot/users/paid_subs.csv'
+    
+    if platname == 'Windows':
+        path_to_users_file = f'{CWD}/max_gpt4_bot/users/paid_subs.csv'
+    else:
+        path_to_users_file = f'{CWD}/users/paid_subs_{date}.csv'
     
     if user_id in config.admin_ids:
         paid_subs_list_csv, count = db.get_paid_subs_list(user_id)
 
         header = ['Number', "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Balance', 'Is_admin', 'Is_paid_sub']
-        with open(path_to_users_file_linux, 'w', newline='') as csvfile:
+        with open(path_to_users_file, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(header)
             writer.writerows(paid_subs_list_csv)
 
-        await update.message.reply_document(open(path_to_users_file_linux, 'rb'), caption=f'👤 Всего платных подписчиков: <b>{count}</b>', parse_mode=ParseMode.HTML)
+        await update.message.reply_document(open(path_to_users_file, 'rb'), caption=f'👤 Всего платных подписчиков: <b>{count}</b>', parse_mode=ParseMode.HTML)
     else:
         await update.message.reply_text("Эта команда доступна только администраторам.")
         return
@@ -367,15 +315,21 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
     db.set_user_attribute(user_id, 'is_paid_sub', True)
     
     header = ["Date", "ID", 'Username', 'First_name', 'Last_name', 'Last_interaction', 'N_used_tokens', 'Balance', 'Is_admin', 'Is_paid_sub', "Provider_payment_charge_id"]
+    
+    if platname == 'Windows':
+        path_to_users_file = f'{CWD}/max_gpt4_bot/users/provider_payment_charge_id.csv'
+    else:
+        path_to_users_file = f'{CWD}/users/provider_payment_charge_id.csv'
+    
     user_attr = db.get_one_paid_sub_list(user_id, date, provider_payment_charge_id)
-    path_to_users_file_linux = f'{CWD}/users/provider_payment_charge_id.csv'
-    with open(path_to_users_file_linux, 'a', newline='') as csvfile:
+    
+    with open(path_to_users_file, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(header)
         writer.writerows(user_attr)
 
     await update.message.reply_text(f"Спасибо за платеж❤️\n\nВаш баланс равен {db.get_user_attribute(user_id, 'token_limit')} токенов!\nПроверить баланс можно в личном кабинете /profile")
-    await context.bot.send_document(config.admin_ids[0], open(path_to_users_file_linux, 'rb'), caption=f'💰 Совершен платеж!', parse_mode=ParseMode.HTML)
+    await context.bot.send_document(config.admin_ids[0], open(path_to_users_file, 'rb'), caption=f'💰 Совершен платеж!', parse_mode=ParseMode.HTML)
 
 
 async def copy_to_all(update: Update, context: CallbackContext):
@@ -388,10 +342,16 @@ async def copy_to_all(update: Update, context: CallbackContext):
     message = update.message
 
     if user_id in config.admin_ids:
+        banned_ids = []
         try:
             user_ids_list = db.for_text_to_all()           
             for user in user_ids_list:
-                await context.bot.copy_message(user, from_chat_id=message.chat_id, message_id=message.message_id, parse_mode=ParseMode.HTML)
+                try:
+                    await context.bot.copy_message(user, from_chat_id=message.chat_id, message_id=message.message_id, parse_mode=ParseMode.HTML)
+                except Exception as e:
+                    banned_ids.append(user)
+            text = f'blocked_ids: {banned_ids}'
+            await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
 
         except ValueError:
             text="Ошибка. copy_to_all()"
@@ -411,7 +371,7 @@ async def send_text_to_all(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     chat_id=update.effective_chat.id
     text="Используйте следующую конструкцию:\n\n/send_message {text}"
-    
+    banned_ids = []
     if user_id in config.admin_ids:
         try:
             if not context.args:
@@ -421,8 +381,12 @@ async def send_text_to_all(update: Update, context: CallbackContext):
                 text = ' '.join(map(str, context.args))
                 user_ids_list = db.for_text_to_all()                
                 for user in user_ids_list:
-                    await context.bot.send_message(user, text, parse_mode=ParseMode.HTML)
-
+                    try:
+                        await context.bot.send_message(user, text, parse_mode=ParseMode.HTML)
+                    except Exception as e:
+                        banned_ids.append(user)
+                text = f'blocked_ids: {banned_ids}'
+                await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
         except ValueError:
             text="Используйте следующую конструкцию:\n\n/send_message {text}\nДобавить функцию загрузки фото, видео или гиф"
             await context.bot.send_message(chat_id, text, parse_mode=ParseMode.HTML)
@@ -486,7 +450,7 @@ async def help_handle(update: Update, context: CallbackContext):
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
-    await context.bot.send_message(chat_id, HELP_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    await context.bot.send_message(chat_id, messages.HELP_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     
 
 async def profile_handle(update: Update, context: CallbackContext):
@@ -513,7 +477,7 @@ async def profile_handle(update: Update, context: CallbackContext):
     if db.get_user_attribute(user_id, 'is_paid_sub'): is_paid_sub = "✅"
     else: is_paid_sub = "❌" 
     
-    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance} токенов\n\n🧑‍💻 Админ: {is_admin}\n🤩 Платный подписчик: {is_paid_sub}\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК\n💲 Курс доллара к рублю на {s_date.date}: <b>{usd_rate:.02f} руб.</b></i>"
+    text = f"🗄 <b>Личный кабинет</b>\n\n👤 <b>Имя:</b> {name} (<b>ID:</b> {user_id})\n💰 <b>Баланс:</b> {balance} токенов\n\n🧑‍💻 Админ: {is_admin}\n🤩 Платный подписчик: {is_paid_sub}\n\n<i>🔥 Токены обновляются ежедневно в 10:00 по МСК</i>"
     
     await register_user_if_not_exists(update, context, update.message.from_user)
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
@@ -581,7 +545,7 @@ async def help_handle_for_admins(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if user_id in config.admin_ids:
         db.set_user_attribute(user_id, "last_interaction", datetime.now())
-        await update.message.reply_text(HELP_MESSAGE_FOR_ADMINS, parse_mode=ParseMode.HTML)
+        await update.message.reply_text(messages.HELP_MESSAGE_FOR_ADMINS, parse_mode=ParseMode.HTML)
         return
     await update.message.reply_text("Эта команда доступна только администраторам.")
     return
@@ -879,14 +843,17 @@ async def voice_message_handle(update: Update, context: CallbackContext):
         voice = update.message.voice
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir = Path(tmp_dir)
-            voice_ogg_path = tmp_dir / "voice.ogg"
+            
+            voice_ogg_path = Path(tmp_dir, "voice.ogg")
 
             # download
             voice_file = await context.bot.get_file(voice.file_id)
             await voice_file.download_to_drive(voice_ogg_path)
 
-            # convert to mp3
-            voice_mp3_path = tmp_dir / "voice.mp3"
+            # convert to mp3    
+            voice_mp3_path = Path(tmp_dir, "voice.mp3")
+            
+            # voice_mp3_path = tmp_dir / "voice.mp3"
             pydub.AudioSegment.from_file(voice_ogg_path).export(voice_mp3_path, format="mp3")
 
             # transcribe
@@ -922,6 +889,8 @@ async def new_dialog_handle(update: Update, context: CallbackContext):
 
     chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
     await update.message.reply_text(f"{openai_utils.CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
+    # await update.message.reply_text(f"{openai_utils.CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=openai_utils.CHAT_MODES[chat_mode]['parse_mode'])
+    
 
 
 async def show_chat_modes_handle(update: Update, context: CallbackContext):
@@ -953,9 +922,8 @@ async def ability_message(update: Update, context: CallbackContext):
 
     keyboard = [[InlineKeyboardButton("Начать чат", callback_data="Начать диалог")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    # path_to_photo_file_linux = f'{CWD}/static'
 
-    await update.message.edit_text(ABILITY_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    await update.message.edit_text(messages.ABILITY_MESSAGE, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     await update.message.reply_media_group(media=links_to_photo, disable_notification=True)
 
 
@@ -994,7 +962,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     # text += f"Вы потратили <b>{n_spent_rub:.03f} руб.</b>\n"
     # text += f"Вы использовали <b>{n_used_tokens}</b> токенов\n\n"
     
-    text += f'💲 Курс доллара к рублю на {s_date.date}: <b>{usd_rate:.02f} руб.</b>\n\n'
+    text += f'💲 Курс доллара к рублю на {s_date}: <b>{usd_rate:.02f} руб.</b>\n\n'
 
     text += "🏷️ Prices\n"
     text += f"<i>- ChatGPT: {rub_rate_per_1000_tokens:.02f} руб. за 1000 токенов\n"
@@ -1059,13 +1027,11 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
 async def debbug(update: Update, context: CallbackContext, n_used_tokens_last_message: int):
     price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
     user_id = update.message.from_user.id
-    
+
     # Получить текущий курс usd to rub
     old_answer = []
-    # old_answer = ["Число месяца: str", Курс usd: float]
 
     n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-    
     s_date = db.get_user_attribute(user_id, 's_date')
     usd_rate = db.get_user_attribute(user_id, 'usd_rate')
 
@@ -1083,7 +1049,7 @@ async def debbug(update: Update, context: CallbackContext, n_used_tokens_last_me
     rub_rate_per_1000_tokens = (price_per_1000_tokens * usd_rate)
     n_spent_rub = (n_used_tokens * rub_rate_per_1000_tokens)/1000
     
-    text = f'\nКурс доллара к рублю на {s_date.date}: <b>{usd_rate} руб.</b>\n\n'
+    text = f'\nКурс доллара к рублю на {s_date}: <b>{usd_rate} руб.</b>\n\n'
     text += f"Потраченные RUB в целом: <b>{n_spent_rub:.03f} руб.</b>\n"
     text += f"Потраченные TOKENS в целом: <b>{n_used_tokens}</b>\n\n"
     text += f"Потраченные TOKENS за последний запрос: <b>{n_used_tokens_last_message}</b>\n"

@@ -1,7 +1,7 @@
 # sberaluteSpeech.py
 # Синтез текста в речь с помощью SBER SaluteSpeech
 # https://developers.sber.ru/docs/ru/salutespeech/category-overview
-# Для работы требует установки на сервер сертификатов от Минцифры
+# Для работы требует установки сертификатов от Минцифры
 
 import os
 import uuid
@@ -12,6 +12,7 @@ import time
 import asyncio
 import aiohttp
 import aiofiles
+import platform
 from pathlib import Path
 
 import config
@@ -219,22 +220,23 @@ async def create_file(text, unique_id):
 
 
 async def main(text, unique_id):
-
-    # path_to_sertificate = config.PATH_TO_SERT_WINDOWS
+    platname = platform.system()
+    if platname == 'Windows':
+        path_to_sertificate = Path('D:/NewDev/max_gpt4_bot', config.PATH_TO_SERTIFICATE)
+    else:
+        path_to_sertificate = Path('/code', config.PATH_TO_SERTIFICATE)
     
-    path_to_sertificate = config.PATH_TO_SERT_LINUX
+
     sber_salite_token_64 = config.SBER_SALUTE_TOKEN
     sber_salute_scope = config.SBER_SALUTE_SCOPE
     sber = sberSaluteSpeech(sber_salite_token_64, sber_salute_scope, path_to_sertificate, unique_id)
     text_file = await create_file(text, unique_id)
     text = await sber.upload_file(text_file)
     text_file = f"{CWD}/voice_messages/voice_message_{unique_id}.ogg"
-    print(text_file)
-    # return text
     return text_file
 
 
 if __name__ == "__main__":
     unique_id = 123
-    text = 'Тест синтеза речи. УУУ получилось'
+    text = 'Тест синтеза речи. УУУ получилось!'
     asyncio.run(main(text, unique_id), debug=False)

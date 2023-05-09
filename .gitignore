@@ -135,3 +135,6 @@ config/config.env
 docker-compose.dev.yml
 
 mongodb/
+users/
+text_messages/
+voice_messages/
