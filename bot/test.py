@@ -7,3 +7,4 @@ date_time_obj = datetime.strptime(s_date, '%Y-%m-%d %H:%M:%S')
 
 timedelta = date_time_obj - now
 print(timedelta.days < -1)
+
