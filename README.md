@@ -1,6 +1,5 @@
 # Telegram Bot MaxBot (MidJourney, ChatGPT, etc.)
 
-
 <p align="center">
 <a href="https://t.me/max_gpt4_bot" alt="bot_pic"><img src="https://github.com/maidaritsydenov/max_gpt4_bot/blob/main/static/header.jpg" width="1288" height="240" /></a>
 </p>
