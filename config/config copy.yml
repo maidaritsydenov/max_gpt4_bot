@@ -1,0 +1,44 @@
+telegram_token: ""
+openai_api_key: ""
+SBER_SALUTE_TOKEN: ""
+
+# yookassa
+payment_token: ""
+
+
+admin_ids: []
+bot_username: ""
+
+# config
+use_chatgpt_api: true
+allowed_telegram_usernames: []  # if empty, the bot is available to anyone. pass a username string to allow it and/or user ids as integers
+new_dialog_timeout: 600  # new dialog starts after timeout (in seconds)
+enable_message_streaming: true  # if set, messages will be shown to user word-by-word
+token_limit_for_users: 10000
+update_token_limit: 86400
+
+
+# SaluteSpeech config (https://developers.sber.ru/studio/workspaces/)
+SBER_SALUTE_SCOPE: "SALUTE_SPEECH_PERS"
+PATH_TO_SERTIFICATE: "/config/russiantrustedca.pem"
+
+
+# prices
+chatgpt_price_per_1000_tokens: 0.002
+gpt_price_per_1000_tokens: 0.02
+whisper_price_per_1_min: 0.006
+dalle_price_per_one_image: 0.020
+
+
+# Кодовые фразы для групп
+CHATGPT_GROUP: "Макс, "
+DALLE_GROUP: "Макс, нарисуй"
+SALUTESPEECH_GROUP: "Макс, расскажи"
+
+
+# Кодовые фразы для приватных чатов
+DALLE_PRIVATE: "Нарисуй"
+SALUTESPEECH_PRIVATE: "Расскажи"
+
+
+

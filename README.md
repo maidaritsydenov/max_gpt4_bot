@@ -110,7 +110,7 @@ cp config/config.yml.example config/config.yml
 - admin_ids: [] # id юзеров - администраторов
 - bot_username: "" # никнейм бота (без @)
 
-
+* Создать в корне папки users, text_messages, voice_messages
 * Выполнить сборку и запуск контейнеров
 ```
 sudo docker compose up -d --build
